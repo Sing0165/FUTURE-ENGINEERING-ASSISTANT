@@ -1,425 +1,1065 @@
 library(shiny)
 library(DT)
+library(httr)
+library(jsonlite)
 library(plotly)
+library(shinyjs)
+library(digest)
 
-# Define UI
+getCareerPathSteps <- function(career_path, api_key) {
+  prompt <- paste("List the steps required to reach the highest or chief level for the career path:", career_path)
+  response <- generateContent(prompt, api_key)
+  return(response)
+}
+
+generateContent <- function(prompt, api_key) {
+  headers <- c(`Content-Type` = "application/json")
+  params <- list(`key` = api_key)
+  data <- sprintf('{"contents": [{"parts":[{"text": "%s"}]}]}', prompt)
+  res <- httr::POST(
+    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent",
+    httr::add_headers(.headers = headers),
+    query = params,
+    body = data
+  )
+  return(content(res)$candidates[[1]]$content$parts[[1]]$text)
+}
+
+generateCareerQuestions <- function(api_key) {
+  prompt <- "Generate 12 personalized questions related to career choices for engineering students."
+  return(unlist(strsplit(generateContent(prompt, api_key), "\n")))
+}
+
+predictCareerPaths <- function(answers, api_key) {
+  if (length(answers) == 0) {
+    return(NULL)
+  }
+ 
+  prompt <- paste("Based on the following user responses, please suggest 5 very specific career paths for an engineering student: ", paste(answers, collapse = " "))
+  response <- generateContent(prompt, api_key)
+  return(unlist(strsplit(response, ",")))
+}
+
+predictSalary <- function(job_title, experience, api_key) {
+  prompt <- paste("What is the expected salary for a", job_title, "with", experience, "experience in the engineering field?")
+  response <- generateContent(prompt, api_key)
+  return(response)
+}
+
+loadUserData <- function() {
+  if (file.exists("user_data.csv")) {
+    return(read.csv("user_data.csv", stringsAsFactors = FALSE))
+  }
+  return(data.frame(Username = character(), Password = character(), stringsAsFactors = FALSE))
+}
+
+saveUserData <- function(user_data) {
+  write.csv(user_data, "user_data.csv", row.names = FALSE)
+}
+
+connectCareerToChatbot <- function(input_question, predicted_paths, api_key) {
+  if (any(grepl("major|subject|study|education|field|college", input_question, ignore.case = TRUE))) {
+    career_paths_string <- paste(predicted_paths, collapse = ", ")
+    response <- generateContent(paste("Given the predicted career paths: ", career_paths_string,
+                                       ". What majors or educational paths should I consider?"), api_key)
+  } else if (any(grepl("career|job|path|profession|engineer|engineering", input_question, ignore.case = TRUE))) {
+    response <- generateContent(paste("Based on the predicted career paths: ", paste(predicted_paths, collapse = ", "),
+                                       "Please provide advice on this question: ", input_question), api_key)
+  } else {
+    warning_text <- "Your question doesn't seem to relate to career paths. However, here's the information you've requested:"
+    response <- generateContent(input_question, api_key)
+    return(list(warning = warning_text, response = response))
+  }
+  return(list(warning = NULL, response = response))
+}
+
+isCareerRelated <- function(input_text, api_key) {
+  prompt <- paste("Analyze the following user input and determine whether it relates to career pathways or job-related topics:", input_text)
+  analysis_response <- generateContent(prompt, api_key)
+ 
+  if (grepl("career|job|profession|engineering|major|skills|employment|opportunities", analysis_response, ignore.case = TRUE)) {
+    return(TRUE)
+  } else {
+    return(FALSE)
+  }
+}
+
+# Add additional function for resume generation
+generateResume <- function(resume_data, api_key) {
+  prompt <- sprintf("Create a resume with the following information: %s", paste(unlist(resume_data), collapse = ", "))
+  resume_text <- generateContent(prompt, api_key)
+  return(resume_text)
+}
+
 ui <- fluidPage(
+  useShinyjs(),
   tags$style(HTML("
-    body {
-        background-color: #b04a5e;
-        font-family: 'Times New Roman', serif;
-        color: #333333;
-        font-size: 18px;
-    }
-    .navbar {
-        background-color: #841617;
-    }
-    .navbar a {
-        color: #ffffff !important;
-    }
-    .container {
-        background-color: rgba(255, 255, 255, 0.9);
-        border-radius: 10px;
-        padding: 25px;
-        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
-        color: #343a40;
-    }
-    h1, h3, h4 {
-        color: #000000; 
-        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
-    }
-    .btn {
-        width: 100%;
-        margin: 10px 0;
-        font-size: 16px;
-        border-radius: 20px;
-    }
-    .footer {
-        text-align: center;
-        padding: 20px;
-        color: #ffffff;
-    }
-    .tab-content {
-        margin-top: 20px;
-    }
-    .welcome-box, .registration-box, .header-box {
-        background-color: rgba(255, 255, 255, 0.9);
-        border-radius: 15px;
-        padding: 30px;
-        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
-        margin-bottom: 20px;
-    }
-    .welcome-box h4, .registration-box h3, .header-box h1 {
-        text-align: center;
-        color: #000;
-        padding: 10px;
-        background-color: #841617;
-        color: #ffffff;
-        border-radius: 10px;
-    }
-    .pink-box {
-        background-color: #f8d7da;  
-        border-radius: 10px;
-        padding: 20px;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    }
-    .chat-box {
-        max-height: 300px;
-        overflow-y: auto;
-        padding: 10px;
-        border: 1px solid #ccc;
-        border-radius: 5px;
-        background-color: #fff;
-    }
-    .user-message {
-        color: blue;
-        font-weight: bold;
-        margin: 5px 0;
-    }
-    .bot-message {
-        color: green;
-        font-weight: bold;
-        margin: 5px 0;
-    }
+    body { background-color: #b04a5e; font-family: 'Times New Roman', serif; color: #333333; font-size: 18px; }
+    .navbar { background-color: #ffffff; }
+    .navbar a { color: #333333 !important; }
+    .container { background-color: rgba(255, 255, 255, 0.9); border-radius: 10px; padding: 25px; box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3); color: #343a40; }
+    h1, h3, h4 { color: #000000; text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3); font-size: 22px; }
+    .btn { width: 100%; margin: 10px 0; font-size: 16px; border-radius: 25px; background-color: #841617; color: #ffffff; border: none; padding: 10px; transition: background 0.3s ease; }
+    .btn:hover { background-color: #6f1417; }
+    .footer { text-align: center; padding: 20px; color: #ffffff; }
+    .welcome-box, .registration-box, .header-box, .chat-box, .pink-box { background-color: rgba(255, 255, 255, 0.9); border-radius: 15px; padding: 30px; box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3); margin-bottom: 20px; }
+    .chat-box { max-height: 300px; overflow-y: auto; }
+    .chat-history { max-height: 400px; overflow-y: auto; background-color: #e8e8e8; padding: 15px; border-radius: 10px; margin-top: 10px; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); }
+    .bubble-title { text-align: center; background-color: #841617; color: #ffffff; border-radius: 25px; padding: 10px 20px; font-size: 24px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3); }
+    .rect-bubble { background-color: #f9c74f; border-radius: 10px; padding: 15px; margin: 10px 0; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); }
+    .table { margin-top: 20px; }
+    .progress-box { background-color: #f1f1f1; padding: 15px; border-radius: 10px; margin-bottom: 15px; text-align: center; }
+    .scrollable { overflow-y: auto; max-height: 500px; }
+    .color-bubble { background-color: #e2e2e2; border-radius: 10px; padding: 15px; margin: 10px 0; position: relative; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); }
+    .welcome-message { font-size: 24px; text-align: center; margin: 20px 0; padding: 20px; border: 1px solid #841617; border-radius: 15px; background-color: rgba(255, 255, 255, 0.9); }
+    .instructions-box { padding: 20px; border-radius: 15px; background-color: rgba(255, 255, 255, 0.8); margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); }
+    .step-box { padding: 15px; border: 2px solid #841617; border-radius: 15px; background-color: rgba(255, 255, 255, 0.9); margin-bottom: 20px; }
+    .sticky-title { position: sticky; top: 0; background-color: #841617; color: white; padding: 10px; }
+    .completion-box { border: 2px solid #841617; border-radius: 15px; padding: 20px; background-color: rgba(255, 255, 255, 0.9); text-align: center; margin-top: 20px; }
+    .important-link { font-size: 18px; font-weight: bold; color: #ffcc00; text-align: center; margin-top: 10px; }
+    .centered-congratulation { text-align: center; font-size: 28px; }
+    .career-path { margin-bottom: 10px; }
   ")),
-  
-  titlePanel("Future Engineer Assistant - ShinyGeminiPro App"),
-  
-  # Registration Page
+
+  # Title Section
+
+  tags$div(class = "bubble-title", "Future Engineer Assistant - ShinyGeminiPro App"),
+  tags$div(img(src = "cute_robot_logo.png", height = "100px", align = "center")),
+
+  # Login Section
   conditionalPanel(
-    condition = "!output.registered",
+    condition = "!output.registered && !output.loggedIn",
     fluidPage(
-      titlePanel(tags$div(class = "header-box", "🔐 Register to Access Future Engineer Assistant")),
-      sidebarLayout(
-        sidebarPanel(
-          tags$div(class = "registration-box",
-                   textInput("first_name", "First Name", placeholder = "Enter your first name..."),
-                   textInput("last_name", "Last Name", placeholder = "Enter your last name..."),
-                   dateInput("dob", "Date of Birth", format = "mm/dd/yyyy"),
-                   textInput("username", "Username", placeholder = "Enter your username..."),
-                   textInput("school", "School", placeholder = "Enter your school..."),
-                   selectInput("year", "Year", choices = c("Freshman", "Sophomore", "Junior", "Senior")),
-                   textInput("email", "Email ID", placeholder = "Enter your email..."),
-                   textInput("phone", "Phone Number", placeholder = "(000) - 000 0000"),
-                   radioButtons("gender", "Gender Identity?", choices = c("Male", "Female", "Trans Male/Trans Man", "Trans Female/Trans Woman", "Genderqueer/Gender Non-Conforming", "Prefer to self-describe, please specify:", "Prefer not to say")),
-                   checkboxGroupInput("race", "Race/Ethnicity (Please select all that apply):", choices = c("American Indian or Alaska Native", "Asian", "Black or African American", "Hispanic or LatinX", "Native Hawaiian or Other Pacific Islander", "White")),
-                   passwordInput("reg_password", "Password"),
-                   passwordInput("reg_password_reenter", "Re-enter Password"),
-                   checkboxInput("terms", "I agree to the Terms and Condition and Privacy Policy"),
-                   actionButton("registerBtn", "Register"),
-                   actionButton("nextBtnReg", "Next", class = "btn-primary")
-          )
-        ),
-        mainPanel(
-          tags$div(class = "registration-box",
-                   h3("Welcome to Future Engineer Assistant! Please register to proceed.")
-          )
-        )
+      tags$div(class = "registration-box",
+               h3("Login to Future Engineer Assistant"),
+               textInput("login_username", "Username *", placeholder = "Enter your username..."),
+               passwordInput("login_password", "Password *"),
+               actionButton("loginBtn", "Login", class = "btn-primary"),
+               tags$div(style = "text-align: center; margin-top: 10px,",
+                        tags$a(href = "#", onclick = "Shiny.setInputValue('navigateToRegistration', 1); return false;", "Don't have an account? Sign up", style = "margin-right: 15px;")
+               )
       )
     )
   ),
-  
-  # Main Application - Visible After Registration
+
+  # Registration Section
   conditionalPanel(
-    condition = "output.registered",
-    tabsetPanel(
-      tabPanel("Home",
-               fluidPage(
-                 titlePanel(tags$div(class = "header-box", "Welcome to the Future Engineer Assistant!")),
-                 tags$div(class = "welcome-box",
-                          h4("Developed by: Akshay Singh and Kaustuabh Pandit"),
-                          h4("Mentor: Dr. Javeed Kittur"),
-                          hr(),
-                          h3("Purpose"),
-                          p("This application leverages voice recognition technology to facilitate a unique interaction with a chatbot designed specifically for engineering students."),
-                          p("The main goal of this project is to provide an intuitive and interactive platform for students to engage with a virtual assistant that can help them explore career paths, salary predictions, and more."),
-                          hr(),
-                          h3("Instructions"),
-                          tags$ol(
-                            tags$li("Click 'Start Recording' to capture your voice."),
-                            tags$li("Once you finish speaking, click 'Stop Recording.'"),
-                            tags$li("Your voice input will be transcribed and displayed in the chat history."),
-                            tags$li("You can also type your questions or commands directly into the text box."),
-                            tags$li("Use the API Key tab to input your API key for chatbot responses."),
-                            tags$li("Explore the Salary Prediction tab to estimate salaries based on your chosen engineering pathway."),
-                            tags$li("Visit the Employment Prediction tab to determine your probability of employment based on your GPA, Major, and Degree.")
-                          ),
-                          hr(),
-                          h3("Each Tab Explained"),
-                          p("Each tab is designed to help you with specific functionalities:"),
-                          tags$ul(
-                            tags$li("Home: Overview of the application and general instructions."),
-                            tags$li("API Key: Input your API key to enable chatbot responses. You will receive a confirmation message once saved."),
-                            tags$li("Voice Interaction: Record your voice or type your messages to interact with the chatbot, which will log all interactions for reference."),
-                            tags$li("Salary Prediction: Select your engineering pathway and experience to predict potential salary. Results will be shown in a pop-up."),
-                            tags$li("Employment Prediction: Input your GPA, Major, and Degree to see your employment probability. This section includes visualizations to help understand the data.")
-                          ),
-                          hr(),
-                          h3("Getting Started"),
-                          p("To begin, navigate to the tabs on the left and follow the instructions to make the most of the chatbot's capabilities!"),
-                          p("Explore each section thoroughly to understand how the chatbot can assist you with your academic and career-related inquiries.")
-                 )
-               )
-      ),
-      tabPanel("API Key",
-               sidebarLayout(
-                 sidebarPanel(
-                   textInput("new_apikey", "Enter New API Key"),
-                   actionButton("saveApiKeyBtn", "Save API Key"),
-                   actionButton("nextBtnApiKey", "Next", class = "btn-primary")
-                 ),
-                 mainPanel(
-                   tags$div(class = "pink-box",
-                            tags$h4("Manage Your API Key"),
-                            tags$p("Enter your API key and click 'Save' to store it. A confirmation will appear if successful."),
-                            tags$h5("Instructions:"),
-                            tags$p("1. Obtain your API key from the provider."),
-                            tags$p("2. Enter the key in the text box."),
-                            tags$p("3. Click 'Save' to store the key for your chatbot interactions.")
-                   )
-                 )
-               )
-      ),
-      tabPanel("Try Gemini Pro (Text & Vision Model)",
-               sidebarLayout(
-                 sidebarPanel(
-                   radioButtons("input_method", "Choose Input Method:",
-                                choices = list("Text" = "text", "Audio Recording" = "audio"),
-                                inline = TRUE),
-                   tags$hr(),
-                   conditionalPanel(
-                     condition = "input.input_method == 'text'",
-                     textAreaInput("userInput", "Ask a Question to the Chatbot", placeholder = "Type your message here...", rows = 3)
-                   ),
-                   conditionalPanel(
-                     condition = "input.input_method == 'audio'",
-                     tags$h5("Audio input selected. Click 'Start Recording' to begin."),
-                     actionButton("startRecording", "Start Recording"),
-                     actionButton("stopRecording", "Stop Recording")
-                   ),
-                   tags$hr(),
-                   actionButton("generateResponseBtn", "Generate Response🔮"),
-                   tags$h4("Answer the Chatbot's Questions"),
-                   textAreaInput("chatbotAnswerInput", "Your Answer", placeholder = "Type your answer here...", rows = 3),
-                   actionButton("submitAnswerBtn", "Submit Answer"),
-                   actionButton("nextBtnGeminiPro", "Next to Salary Prediction", class = "btn-primary")
-                 ),
-                 mainPanel(
-                   tags$div(class = "pink-box",
-                            tags$div(class = "chat-box", 
-                                     uiOutput("chatOutput")
-                            ),
-                            textOutput("audioMessage"),
-                            plotlyOutput("careerChart")
-                   )
-                 )
-               )
-      ),
-      tabPanel("Salary Prediction",
-               sidebarLayout(
-                 sidebarPanel(
-                   h4("Instructions"),
-                   p("In this section, we'll guide you through the salary prediction process."),
-                   p("1. Select your job title and experience level."),
-                   p("2. Based on your selections, you'll be asked follow-up questions."),
-                   p("3. After providing the necessary information, you'll see your predicted salary."),
-                   hr(),
-                   selectInput("job_title", "Select Job Title", choices = unique(data$job_title)),
-                   selectInput("experience", "Select Experience Level", choices = unique(data$experience_level)),
-                   actionButton("askSalaryQuestions", "Next"),
-                   actionButton("nextBtnSalary", "Next", class = "btn-primary")
-                 ),
-                 mainPanel(
-                   tags$div(class = "pink-box",
-                            DTOutput("salaryResponsesTable"),
-                            textOutput("salary_response"),
-                            textOutput("chatbotSalaryResponse"), 
-                            plotlyOutput("salary_histogram"),
-                            plotlyOutput("salary_boxplot")
-                   )
-                 )
+    condition = "output.registered && !output.loggedIn",
+    fluidPage(
+      tags$div(class = "registration-box",
+               h3("Register to Access Future Engineer Assistant"),
+               fluidRow(
+                 column(4, textInput("first_name", "First Name *", placeholder = "Enter your first name..."),
+                        dateInput("dob", "Date of Birth *", format = "mm/dd/yyyy"),
+                        textInput("username", "Username *", placeholder = "Enter your username..."),
+                        passwordInput("reg_password", "Password *")),
+                 column(4, textInput("last_name", "Last Name *", placeholder = "Enter your last name..."),
+                        textInput("school", "School *", placeholder = "Enter your school..."),
+                        selectInput("year", "Year *", choices = c("Freshman", "Sophomore", "Junior", "Senior")),
+                        passwordInput("reg_password_reenter", "Re-enter Password *")),
+                 column(4, textInput("email", "Email ID *", placeholder = "Enter your email..."),
+                        textInput("phone", "Phone Number", placeholder = "(000) - 000 0000"))
+               ),
+               fluidRow(
+                 column(6, radioButtons("gender", "Gender Identity:",
+                                        choices = c("Male", "Female", "Trans Male/Trans Man", "Trans Female/Trans Woman",
+                                                    "Genderqueer/Gender Non-Conforming", "Prefer to self-describe, please specify:", "Prefer not to say"))),
+                 column(6, checkboxGroupInput("race", "Race/Ethnicity (Please select all that apply):",
+                                              choices = c("American Indian or Alaska Native", "Asian", "Black or African American",
+                                                          "Hispanic or LatinX", "Native Hawaiian or Other Pacific Islander", "White")))
+               ),
+               checkboxInput("terms", "I agree to the Terms and Condition and Privacy Policy *", value = FALSE),
+               fluidRow(
+                 column(6, actionButton("registerBtn", "Register", class = "btn-primary")),
+                 column(6, actionButton("nextBtnReg", "Next", class = "btn-primary", disabled = TRUE))
+               ),
+               fluidRow(
+                 column(12, tags$div(style = "text-align: center; margin-top: 10px;",
+                                     tags$a(href = "#", onclick = "Shiny.setInputValue('navigateToLogin', 1); return false;", "Already have an account? Login", style = "margin-right: 15px;")
+                 )),
+                 uiOutput("registration_warning")
                )
       )
     )
   ),
-  
-  # JavaScript for text-to-speech and audio recording
-  tags$script(HTML("
-    Shiny.addCustomMessageHandler('speak', function(message) {
-      var msg = new SpeechSynthesisUtterance(message);
-      window.speechSynthesis.speak(msg);
-    });
 
-    let mediaRecorder;
-    let audioChunks = [];
-    
-    document.querySelector('#startRecording').onclick = () => {
-      navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
-        mediaRecorder = new MediaRecorder(stream);
-        mediaRecorder.start();
-        mediaRecorder.ondataavailable = event => {
-          audioChunks.push(event.data);
-        };
-      });
-    };
+  # Pre-Survey Confirmation
+  conditionalPanel(
+    condition = "output.loggedIn && !output.preSurveyCompleted",
+    fluidPage(
+      tags$div(class = "registration-box",
+               h3("Pre-Survey Confirmation"),
+               tags$p("Please confirm that you have completed the pre-survey."),
+               tags$p("Please complete this survey and contact me (akshay.singh-1@ou.edu) to ask any questions you may have BEFORE agreeing to participate in my research."),
+               tags$p("What is the purpose of this research? This research aims to understand engineering students’ perceptions on the use of an AI platform to select their career path."),
+               tags$p("How many participants will be in this research? About 300 people will take part in this research."),
+               tags$p("What will participants be asked to do? If you agree to be in this research, you will be required to complete three tasks:
+                       1. Complete a pre-survey (5–7-minute online survey)
+                       2. Interact with the chatbot and obtain predicted career paths (5–30-minute online platform)
+                       3. Complete a post-survey (5–7-minute online survey)"),
+               tags$a(href = "https://ousurvey.qualtrics.com/jfe/form/SV_0wBJjQYoTv2v0ii", target = "_blank",
+                      class = "important-link", "Complete Pre-Survey"),
+               checkboxInput("preSurveyCheck", "I have completed the pre-survey.", value = FALSE),
+               actionButton("confirmSurveyBtn", "Continue", class = "btn-primary")
+      )
+    )
+  ),
 
-    document.querySelector('#stopRecording').onclick = () => {
-      mediaRecorder.stop();
-      mediaRecorder.onstop = () => {
-        const audioBlob = new Blob(audioChunks);
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const base64data = reader.result;
-          Shiny.setInputValue('audioData', base64data);
-        };
-        reader.readAsDataURL(audioBlob);
-        audioChunks = [];
-      };
-    };
+  # Main Content Section
+  conditionalPanel(
+    condition = "output.preSurveyCompleted",
+    tabsetPanel(id = "tabs", type = "hidden",
+                tabPanel("Research Overview",
+                         fluidPage(
+                           titlePanel(tags$div(class = "header-box", "Research Overview")),
+                           tags$div(class = "welcome-box",
+                                    h3("Research Overview"),
+                                    p("As the field of engineering continues to grow, undergraduate and graduate students are presented with a wide range of career choices, making it all the more challenging to decide the path that is best suited for them. To assist these students in making well-informed decisions, our project’s aim is to establish an interactive chatbot which is tailored specifically for engineering undergraduates/graduates."),
+                                    p("By leveraging natural language processing and generative AI technologies, this bot will engage students in personalized conversations, align their current skill set with the best suitable careers, and provide customized guidance to help navigate their professional choices efficiently and effectively."),
+                                    actionButton("continueToInstructions", "Next", class = "btn-primary")
+                           )
+                         )
+                ),
 
-    let recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-    recognition.onresult = function(event) {
-      const transcript = event.results[0][0].transcript;
-      Shiny.setInputValue('userInput', transcript);
-    };
-    
-    document.querySelector('#startRecording').onclick = function() {
-      recognition.start();
-    };
-  "))
+                tabPanel("Instructions",
+                         fluidPage(
+                           titlePanel(tags$div(class = "header-box", "Instructions")),
+                           fluidRow(
+                             column(6,
+                                    tags$div(class = "instructions-box",
+                                             h3("Instructions:"),
+                                             tags$div(class = "step-box",
+                                                      tags$h4("Step One:"),
+                                                      tags$p("Answer 10 free response questions generated by Gemini API designed to gather initial information about your interests and remove bias. By doing so, the chatbot is able to consider your individual responses and preferences, leading to more tailored career recommendations.")
+                                             ),
+                                             tags$div(class = "step-box",
+                                                      tags$h4("Step Two:"),
+                                                      tags$p("Once you obtain your predicted career paths, move to Ask Question in the Gemini Chatbot. The bot will allow users to ask any career-related questions via text or audio. The bot will then analyze your responses and quickly provide you with personalized career recommendations.")
+                                             )
+                                    )
+                             ),
+                             column(6,
+                                    tags$div(class = "instructions-box",
+                                             h3("Additional Notes:"),
+                                             tags$p("Ensure that you provide thoughtful and detailed responses to help the chatbot generate accurate suggestions."),
+                                             tags$p("Feel free to ask the chatbot about specific careers, educational paths, or skills required, so you can be well-prepared for your journey.")
+                                    )
+                             )
+                           ),
+                           actionButton("continueToChatbot", "Accept & Proceed to Chatbot", class = "btn-primary")
+                         )
+                ),
+
+                tabPanel("Career Path Prediction",
+                         sidebarLayout(
+                           sidebarPanel(
+                             tags$h4("Instructions"),
+                             tags$p("1. Start by answering the questions that the bot will ask you, which are essential for personalized career recommendations."),
+                             tags$p("2. Upon answering all questions, you will receive a list of recommended career paths tailored to your skills and preferences."),
+                             tags$p("3. You can later ask the bot any career-related inquiries to gather more information."),
+                             tags$p("4. Remember to take notes on the recommended paths as they can guide your next steps in your career planning."),
+                             tags$hr(),
+                             uiOutput("questionsProgress")
+                           ),
+                           mainPanel(
+                             tags$div(class = "pink-box",
+                                      tags$h4("Chatbot Questions"),
+                                      div(class = "chat-history",
+                                          uiOutput("chatOutput")
+                                      ),
+                                      tags$hr(),
+                                      actionButton("loadingChatbotResponse", "Waiting for Response...", loading = TRUE, style = "display: none;"),
+                                      textAreaInput("chatbotAnswerInput", "Your Answer", placeholder = "Type your answer here...", rows = 4),  
+                                      actionButton("submitAnswerBtn", "Submit Answer", class = "btn-primary"),
+                                      tags$hr(),
+                                      uiOutput("predictedCareerPaths"),
+                                      uiOutput("errorMessage")  # For displaying error messages
+                             )
+                           )
+                         )
+                ),
+
+                tabPanel("Quick Glimpse",
+                         fluidPage(
+                           tags$div(class = "completion-box",
+                                    h2("Quick Glimpse"),
+                                    p("Based on the options you selected, we've created a personalized summary of your preferences and interests. It appears that your choices align with the following themes:"),
+                                    DTOutput("predictedCareerPathsTable"),
+                                    downloadButton("downloadCareerPaths", "Download Predicted Career Paths CSV", class = "btn-primary"),
+                                    actionButton("nextToWelcomeChatbot", "Next to Welcome Chatbot", class = "btn-primary")
+                           )
+                         )
+                ),
+
+                tabPanel("Welcome to Chatbot",
+                         fluidPage(
+                           tags$div(class = "welcome-box",
+                                    h3("Welcome to Gemini Chatbot"),
+                                    tags$div(img(src = "https://png.pngtree.com/png-clipart/20230401/original/pngtree-smart-chatbot-cartoon-clipart-png-image_9015126.png", height = "200px", align = "center")),
+                                    p("The Future Engineer Assistant (FEA) is an innovative AI-powered chatbot designed specifically to provide personalized career guidance for engineering students. By leveraging advanced natural language processing (NLP) and generative AI technologies, the FEA engages users in dynamic, interactive conversations that facilitate the exploration of potential career paths. Unlike traditional career counseling methods, which can be limited in personalization and immediacy, the FEA is capable of tailoring its responses based on real-time user inputs. This enables the chatbot to offer customized advice and insights that align more closely with individual interests and academic backgrounds."),
+                                    p("At the heart of the FEA's functionality is its ability to generate context-specific questions aimed at uncovering important information about users’ preferences, aspirations, and academic strengths. By employing a generative AI model integrated through an API, the chatbot can produce engaging prompts that encourage students to reflect on their career goals. This dynamic questioning process not only enhances the depth of information gathered but also fosters an interactive environment where students feel comfortable exploring their options. The ability of the FEA to adaptively shift its dialogue based on input allows for a more personalized experience that feels less like a scripted interaction and more like a meaningful conversation with a knowledgeable mentor."),
+                                    p("In addition to its interactive questioning capabilities, the FEA features a 'Quick Glimpse' mechanism that summarizes potential career paths based on the information provided by users. This visual representation helps students see the myriad of possibilities that align with their skills and interests, empowering them to make informed decisions about their educational journeys. This feature can serve as a source of inspiration and guidance, helping students visualize how their academic pursuits can directly translate into fulfilling careers in engineering. By simplifying the exploration process, the FEA enhances engagement and nurtures a proactive approach to career planning."),
+                                    p("The FEA goes beyond merely suggesting career paths; it also incorporates a salary prediction functionality that adds a crucial layer of practicality to its career guidance. After students have explored different job titles, they can select their favorites from a dropdown menu, along with their indicated experience level to receive relevant salary insights based on current market data. This feature offers valuable financial expectations that can influence students' decision-making processes, enabling them to weigh the viability of different career trajectories in a practical manner. By integrating salary predictions with career path suggestions, the chatbot provides a comprehensive and realistic overview of potential outcomes for engineering students."),
+                                    p("Lastly, user feedback and evaluation are pivotal aspects of the FEA's development and implementation. Through a structured methodology incorporating pre- and post-surveys, the impact of the chatbot on students’ confidence and knowledge regarding their career choices is quantitatively assessed. This iterative feedback loop not only helps in gauging the effectiveness of the chatbot but also identifies areas for future enhancement. The emphasis on user-centered design ensures that the FEA evolves in accordance with users' needs, ensuring it remains a relevant and valuable resource for engineering students navigating their career journeys. The Future Engineer Assistant thus stands as a promising solution for bridging the gap between education and employment in the ever-evolving engineering landscape."),
+                                    actionButton("nextToGeminiChatbot", "Next to Gemini Chatbot", class = "btn-primary")
+                           )
+                         )
+                ),
+
+                tabPanel("Ask Question Gemini Chatbot",
+                         sidebarLayout(
+                           sidebarPanel(
+                             tags$h4("What Feature Do You Want to Use?"),
+                             radioButtons("input_method", "Choose Input Method:",
+                                          choices = list("Text" = "text", "Audio Recording" = "audio"),
+                                          inline = TRUE,
+                                          selected = "text"),
+                             uiOutput("voiceControls")
+                           ),
+                           mainPanel(
+                             tags$div(class = "pink-box",
+                                      tags$p("You can ask the chatbot any questions regarding career-related topics."),
+                                      tags$p("Type your question or use the 'Ask by Audio' feature for a more hands-free interaction."),
+                                      div(class = "color-bubble", textAreaInput("userInput", "Ask your question here:", placeholder = "Type your question here...", rows = 4)),
+                                      tags$hr(),
+                                      tags$h4("Responses"),
+                                      div(class = "chat-history",
+                                          DTOutput("chatOutputResponses")
+                                      ),
+                                      actionButton("loadingResponse", "Waiting for Response...", loading = TRUE, style = "display: none;"),
+                                      actionButton("askQuestionBtn", "Ask Question", class = "btn-primary"),
+                                      downloadButton("downloadChatbotResponses", "Download Chatbot Responses CSV", class = "btn-primary"),
+                                      actionButton("nextToSalaryPage", "Next to Salary Insights", class = "btn-primary")
+                             )
+                           )
+                         )
+                ),
+
+                tabPanel("Salary Prediction",
+                         sidebarLayout(
+                           sidebarPanel(
+                             tags$h4("Instructions"),
+                             tags$p("1. Select from a variety of engineering career paths and experience levels."),
+                             tags$p("2. After providing this information, the bot will recommend salary insights based on the latest industry standards."),
+                             tags$p("3. You can also ask the bot questions regarding salaries or career inquiries."),
+                             tags$p("4. Make sure to take note of the salary insights provided as they can inform your negotiations in future job offers."),
+                             tags$hr(),
+                             selectInput("job_title", "Select Job Title *", choices = NULL),  
+                             selectInput("experience", "Select Experience Level *", choices = c("Entry Level", "Mid Level", "Senior Level")),
+                             actionButton("askSalaryQuestions", "Get Salary Information", class = "btn-primary")
+                           ),
+                           mainPanel(
+                             tags$div(class = "pink-box scrollable",
+                                      DTOutput("salaryResponsesTable"),
+                                      downloadButton("downloadSalaryResponses", "Download Salary Responses CSV", class = "btn-primary"),
+                                      actionButton("loadingSalaryResponse", "Waiting for Response...", loading = TRUE, style = "display: none;"),
+                                      plotlyOutput("salary_histogram"),
+                                      plotlyOutput("salary_boxplot"),
+                                      actionButton("nextToResumeBuilder", "Next to Resume Builder", class = "btn-primary")
+                             )
+                           )
+                         )
+                ),
+
+                # Resume Builder Tab
+                tabPanel("Resume Builder",
+                         fluidPage(
+                           tags$h3("Resume Builder"),
+                           tags$div(
+                             textInput("name", "Name *"),
+                             textInput("email", "Email Address *"),
+                             textInput("phone", "Phone Number *"),
+                             textInput("linkedin", "LinkedIn Profile *"),
+                             textInput("location", "Location (Optional) *")
+                           ),
+                           tags$div(
+                             textAreaInput("summary", "Professional Summary / Objective", placeholder = "Brief Summary of Career Goals or Objective"),
+                             textInput("key_skills", "Key Skills and Strengths")
+                           ),
+                           tags$h4("Education"),
+                           tags$div(
+                             textInput("degree", "Degree (e.g., Bachelor of Engineering in Computer Science)"),
+                             textInput("institution", "Institution Name *"),
+                             textInput("graduation_date", "Graduation Date (Expected or Completed) *"),
+                             textInput("coursework", "Relevant Coursework (Optional)"),
+                             textInput("gpa", "GPA (Optional)")
+                           ),
+                           tags$h4("Research Experience"),
+                           tags$div(
+                             textInput("research_title", "Research Title / Project Name"),
+                             textInput("research_institution", "Institution/Organization"),
+                             textInput("research_role", "Role/Position (e.g., Research Assistant)"),
+                             textInput("research_duration", "Duration (Start Date – End Date)"),
+                             textAreaInput("research_contributions", "Key Contributions and Results")
+                           ),
+                           tags$h4("Leadership & Team Experience"),
+                           tags$div(
+                             textInput("leadership_title", "Position Title (e.g., Team Lead, Project Manager)"),
+                             textInput("leadership_org", "Organization/Institution"),
+                             textInput("leadership_duration", "Duration (Start Date – End Date)"),
+                             textAreaInput("leadership_responsibilities", "Key Responsibilities and Achievements")
+                           ),
+                           tags$h4("Technical Skills"),
+                           tags$div(
+                             textInput("programming_languages", "Programming Languages (e.g., R, Python)"),
+                             textInput("software_tools", "Software/Tools (e.g., Power BI, R Shiny)"),
+                             textInput("data_science_tools", "Data Science/AI Tools (e.g., SVM, NLP)"),
+                             textInput("bioinformatics_tools", "Bioinformatics Tools (e.g., PCR, RNA sequencing)"),
+                             textInput("other_skills", "Other Relevant Skills")
+                           ),
+                           tags$h4("Projects"),
+                           tags$div(
+                             textInput("project_title", "Project Title"),
+                             textInput("project_tools", "Tools/Technologies Used"),
+                             textInput("project_duration", "Duration"),
+                             textAreaInput("project_description", "Description of the Project and Your Role"),
+                             textAreaInput("project_outcomes", "Outcomes or Results")
+                           ),
+                           tags$h4("Publications & Presentations"),
+                           tags$div(
+                             textInput("publication_title", "Title of Paper or Presentation"),
+                             textInput("publication_conference", "Journal/Conference Name"),
+                             textInput("publication_authors", "Authors"),
+                             textInput("publication_date", "Publication Date"),
+                             textInput("publication_link", "Link to the Publication (Optional)")
+                           ),
+                           tags$h4("Honors & Awards"),
+                           tags$div(
+                             textInput("award_name", "Award Name (e.g., Dean’s Honor Roll, HRAP Fellowship)"),
+                             textInput("award_org", "Institution/Organization"),
+                             textInput("award_date", "Date Received")
+                           ),
+                           tags$h4("Certifications"),
+                           tags$div(
+                             textInput("certification_name", "Certification Name (e.g., Data Science Certification)"),
+                             textInput("certifying_org", "Certifying Organization"),
+                             textInput("certification_date", "Date Earned")
+                           ),
+                           tags$h4("Extracurricular Involvement"),
+                           tags$div(
+                             textInput("extracurricular_name", "Organization/Club Name"),
+                             textInput("extracurricular_role", "Role/Position"),
+                             textInput("extracurricular_duration", "Duration"),
+                             textAreaInput("extracurricular_achievements", "Key Achievements or Contributions")
+                           ),
+                           tags$h4("Languages"),
+                           tags$div(
+                             textInput("language_spoken", "Language(s) Spoken"),
+                             textInput("language_proficiency", "Proficiency Level (e.g., Fluent, Intermediate)")
+                           ),
+                           tags$h4("References"),
+                           tags$div(
+                             textInput("reference_name", "Reference Name"),
+                             textInput("reference_title", "Title"),
+                             textInput("reference_org", "Institution/Organization"),
+                             textInput("reference_contact", "Contact Information (optional)")
+                           ),
+                           actionButton("generateResumeBtn", "Generate Resume", class = "btn-primary"),
+                           verbatimTextOutput("resumeOutput")
+                         )
+                ),
+
+                tabPanel("Session Completed",  
+                         fluidPage(
+                           tags$div(class = "completion-box",
+                                    h2("Session Completed"),
+                                    p("Your session has been completed!"),
+                                    p("Thank you for completing your session with FSA. As a final step, we would like to ask for your feedback through a brief survey."),
+                                    a(href = "https://ousurvey.qualtrics.com/jfe/form/SV_3n3jlqsnkoMkn0W", target = "_blank", "Click here to take the survey:", style = "font-weight: bold; color: #841617; text-decoration: underline;")
+                           )
+                         )
+                )
+               )
+      )
 )
-# Define server logic
+
 server <- function(input, output, session) {
   chat_history <- reactiveVal(data.frame(Role = character(), Message = character(), stringsAsFactors = FALSE))
-  audio_message <- reactiveVal("")
   registered <- reactiveVal(FALSE)
+  loggedIn <- reactiveVal(FALSE)
+  preSurveyCompleted <- reactiveVal(FALSE)
   salary_responses <- reactiveVal(data.frame(Job_Title = character(), Experience_Level = character(), Response = character(), stringsAsFactors = FALSE))
-  
-  career_questions <- c(
-    "What is your preferred engineering discipline?",
-    "What is your ideal work environment?",
-    "What skills do you think are most important for your career?",
-    "What are your long-term career goals?",
-    "What type of projects excite you the most?"
-  )
   current_question_index <- reactiveVal(1)
-  answer_received <- reactiveVal(FALSE)
-  
+  randomized_questions <- reactiveVal()  
+  chatbot_responses <- reactiveVal(data.frame(Question = character(), Response = character(), stringsAsFactors = FALSE))
+ 
+  user_details <- loadUserData()
+  recommended_careers <- reactiveVal(NULL)
+  predicted_career_paths <- reactiveVal(NULL)
+
+  tabs_access <- reactiveVal(c(FALSE, FALSE, FALSE, FALSE, FALSE, FALSE))
+
   observeEvent(input$registerBtn, {
-    # Add registration logic here if needed
-    registered(TRUE)
+    required_fields <- c(input$first_name, input$last_name, input$username, input$reg_password,
+                         input$reg_password_reenter, input$email, input$school, input$year,
+                         input$gender, input$terms)
+
+    field_names <- c("First Name", "Last Name", "Username", "Password",
+                     "Re-enter Password", "Email", "School", "Year",
+                     "Gender Identity", "Terms and Conditions")
+
+    empty_fields <- field_names[sapply(required_fields, function(x) is.na(x) || x == "")]
+   
+    if (length(empty_fields) > 0) {
+      showModal(modalDialog(
+        title = "Registration Warning",
+        paste("Please complete the following fields:", paste(empty_fields, collapse = ", ")),
+        easyClose = TRUE,
+        footer = NULL,
+        size = "m"
+      ))
+    } else {
+      if (input$terms) {
+        if (input$reg_password == input$reg_password_reenter) {
+          hashed_password <- digest(input$reg_password, algo = "sha256")  
+          new_user <- data.frame(Username = input$username, Password = hashed_password, stringsAsFactors = FALSE)
+          user_details <<- rbind(user_details, new_user)  
+          saveUserData(user_details)  
+          registered(TRUE)
+          shinyjs::enable("nextBtnReg")
+          showModal(modalDialog(
+            title = "Registration Successful",
+            "You have registered successfully! Please log in.",
+            easyClose = TRUE,
+            footer = NULL
+          ))
+        } else {
+          showModal(modalDialog(
+            title = "Error",
+            "Passwords do not match. Please try again.",
+            easyClose = TRUE,
+            footer = NULL
+          ))
+        }
+      } else {
+        showModal(modalDialog(
+          title = "Terms and Conditions",
+          "You must agree to the Terms and Conditions to proceed.",
+          easyClose = TRUE,
+          footer = NULL
+        ))
+      }
+    }
   })
-  
+ 
   output$registered <- reactive({ registered() })
   outputOptions(output, "registered", suspendWhenHidden = FALSE)
-  
-  observeEvent(input$saveApiKeyBtn, {
-    if (nzchar(input$new_apikey)) {
+ 
+  output$loggedIn <- reactive({ loggedIn() })
+  outputOptions(output, "loggedIn", suspendWhenHidden = FALSE)
+ 
+  output$preSurveyCompleted <- reactive({ preSurveyCompleted() })
+  outputOptions(output, "preSurveyCompleted", suspendWhenHidden = FALSE)
+ 
+  observeEvent(input$confirmSurveyBtn, {
+    if (input$preSurveyCheck) {
+      preSurveyCompleted(TRUE)
+      tabs_access(c(TRUE, FALSE, FALSE, FALSE, FALSE, FALSE))  
+    }
+  })
+ 
+  observeEvent(input$continueToInstructions, {
+    tabs_access(c(TRUE, TRUE, FALSE, FALSE, FALSE, FALSE))  
+    updateTabsetPanel(session, "tabs", selected = "Instructions")
+  })
+ 
+  observeEvent(input$continueToChatbot, {
+    tabs_access(c(TRUE, TRUE, TRUE, FALSE, FALSE, FALSE))  
+    updateTabsetPanel(session, "tabs", selected = "Career Path Prediction")
+    resetChat()
+  })
+ 
+  observeEvent(input$loginBtn, {
+    req(input$login_username, input$login_password)
+    user <- user_details
+    if (nrow(user) > 0) {
       showModal(modalDialog(
-        title = "API Key Saved",
-        "Your API key has been saved successfully.",
+        title = "Loading",
+        "Please wait while we process your request.",
         easyClose = TRUE,
         footer = NULL
       ))
-      askCareerQuestions()
+      Sys.sleep(2)  
+      hashed_login_password <- digest(input$login_password, algo = "sha256")  
+      if (any(user$Username == input$login_username & user$Password == hashed_login_password)) {
+        loggedIn(TRUE)
+        resetChat()
+      } else {
+        showModal(modalDialog(
+          title = "Login Error",
+          "Invalid credentials. Please try again.",
+          easyClose = TRUE,
+          footer = NULL
+        ))
+      }
     } else {
       showModal(modalDialog(
-        title = "Error",
-        "Please enter a valid API key.",
+        title = "Login Error",
+        "No registered users found. Please create an account.",
         easyClose = TRUE,
         footer = NULL
       ))
     }
   })
-  
+ 
+  observeEvent(input$navigateToRegistration, {
+    registered(TRUE)
+    loggedIn(FALSE)
+  })
+ 
+  observeEvent(input$navigateToLogin, {
+    registered(FALSE)
+    loggedIn(FALSE)
+  })
+ 
+  resetChat <- function() {
+    current_question_index(1)
+    chat_history(data.frame(Role = character(), Message = character(), stringsAsFactors = FALSE))
+    chatbot_responses(data.frame(Question = character(), Response = character(), stringsAsFactors = FALSE))
+    recommended_careers(NULL)
+    predicted_career_paths(NULL)  
+    questions <- generateCareerQuestions(api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")  
+    randomized_questions(questions)
+    askCareerQuestions()
+  }
+ 
   askCareerQuestions <- function() {
-    if (current_question_index() <= length(career_questions)) {
-      question <- career_questions[current_question_index()]
+    if (current_question_index() <= length(randomized_questions())) {
+      question <- randomized_questions()[current_question_index()]
       chat_history(rbind(chat_history(), data.frame(Role = "Bot", Message = question, stringsAsFactors = FALSE)))
       current_question_index(current_question_index() + 1)
-      answer_received(FALSE)
     } else {
-      chat_history(rbind(chat_history(), data.frame(Role = "Bot", Message = "Now you can ask me any questions you may have.", stringsAsFactors = FALSE)))
+      chat_history(rbind(chat_history(), data.frame(Role = "Bot", Message = "All questions answered! Please click the next button to see your predicted career paths.", stringsAsFactors = FALSE)))
+      recommendCareers()
     }
   }
-  
-  observeEvent(input$generateResponseBtn, {
-    req(input$userInput)
-    user_text <- input$userInput
-    response <- generateContent(user_text, api_key = input$new_apikey)
-    
-    chat_history(rbind(chat_history(), data.frame(Role = "User", Message = user_text, stringsAsFactors = FALSE)))
-    chat_history(rbind(chat_history(), data.frame(Role = "Bot", Message = response, stringsAsFactors = FALSE)))
-    
-    session$sendCustomMessage(type = 'speak', message = response)
+
+  output$errorMessage <- renderUI({
+    req(input$chatbotAnswerInput)
+    if (is.character(chat_history()) && nrow(chat_history()) > 0 &&
+        chat_history()$Role[nrow(chat_history())] == "User") {
+      last_question <- tail(chat_history()$Message, 1)
+      answer_text <- input$chatbotAnswerInput
+      if (!isCareerRelated(answer_text, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")) {
+        return(tags$div(class = "rect-bubble",
+                        paste("You have not answered what the question asked: ", last_question)))
+      }
+    }
+    return(NULL)  # Default return no error message
   })
-  
+ 
   observeEvent(input$submitAnswerBtn, {
     req(input$chatbotAnswerInput)
     answer_text <- input$chatbotAnswerInput
-    
+    if (!isCareerRelated(answer_text, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")) {
+      updateTextAreaInput(session, "chatbotAnswerInput", value = "")
+      return()  # Skip further processing if the answer is unrelated
+    }
+   
+    # Update chat history for user input
     chat_history(rbind(chat_history(), data.frame(Role = "User", Message = answer_text, stringsAsFactors = FALSE)))
-    chat_history(rbind(chat_history(), data.frame(Role = "Bot", Message = paste("You answered:", answer_text), stringsAsFactors = FALSE)))
-    
-    answer_received(TRUE)
     askCareerQuestions()
+    updateTextAreaInput(session, "chatbotAnswerInput", value = "")
   })
-  
+ 
+  output$questionsProgress <- renderUI({
+    answered <- current_question_index() - 1  
+    total <- length(randomized_questions())
+    progress <- round((answered / total) * 100)
+
+    tags$div(class = "progress-box",
+             tags$div(style = "border-radius: 10px; width: 100%; background-color: #f1f1f1;",
+                      tags$div(style = paste0("width: ", progress, "%; background-color: #007bff; color: white; text-align: center; border-radius: 10px;"),
+                               paste0(progress, "%"))
+             )
+    )
+  })
+ 
+  output$predictedCareerPaths <- renderUI({
+    if (current_question_index() > length(randomized_questions())) {
+      actionButton("nextToGlimpse", "Next to See Predicted Career Paths", class = "btn-primary")
+    }
+  })
+ 
+  observeEvent(input$nextToGlimpse, {
+    user_answers <- unlist(chat_history()[chat_history()$Role == "User", "Message"])
+    predicted_career_paths(predictCareerPaths(user_answers, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ"))  
+   
+    tabs_access(c(TRUE, TRUE, TRUE, TRUE, FALSE, FALSE))  
+    updateTabsetPanel(session, "tabs", selected = "Quick Glimpse")
+  })
+ 
+  output$predictedCareerPathsTable <- renderDT({
+    req(predicted_career_paths())
+    
+    # Create a clean data frame for display
+    df <- data.frame(Career_Path = predicted_career_paths(), stringsAsFactors = FALSE)
+    datatable(df, options = list(pageLength = 5, autoWidth = TRUE), rownames = FALSE)
+  })
+
+  output$downloadCareerPaths <- downloadHandler(
+    filename = function() {
+      paste("predicted_career_paths_", Sys.Date(), ".csv", sep = "")
+    },
+    content = function(file) {
+      write.csv(predicted_career_paths(), file, row.names = FALSE)
+    }
+  );
+
   output$chatOutput <- renderUI({
     chat_data <- chat_history()
-    chat_list <- lapply(1:nrow(chat_data), function(i) {
-      message_class <- ifelse(chat_data$Role[i] == "User", "user-message", "bot-message")
-      tags$div(class = message_class, paste0(chat_data$Role[i], ": ", chat_data$Message[i]), style = "margin: 10px 0; line-height: 1.5;")
-    })
-    do.call(tagList, chat_list)
+    dataTableOutput("chatDataTable")
   })
-  
+ 
+  output$chatDataTable <- renderDataTable({
+    chat_history()
+  }, options = list(pageLength = 1, autoWidth = TRUE))
+ 
   observeEvent(input$askSalaryQuestions, {
-    job_title <- input$job_title
+    job_title_input <- input$job_title
     experience_level <- input$experience
-    
-    if (!is.null(job_title) && !is.null(experience_level)) {
-      user_question <- paste("What is your expected salary range for a", job_title, "with", experience_level, "experience?")
-      response <- generateContent(user_question, api_key = input$new_apikey)
-      chat_history(rbind(chat_history(), data.frame(Role = "User", Message = user_question, stringsAsFactors = FALSE)))
-      chat_history(rbind(chat_history(), data.frame(Role = "Bot", Message = response, stringsAsFactors = FALSE)))
-      
-      current_responses <- salary_responses()
-      salary_responses(rbind(current_responses, data.frame(Job_Title = job_title, Experience_Level = experience_level, Response = response, stringsAsFactors = FALSE)))
-      
-      session$sendCustomMessage(type = 'speak', message = response)
+   
+    if (!is.null(job_title_input) && !is.null(experience_level)) {
+      response <- predictSalary(job_title_input, experience_level, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")  
+      salary_responses(rbind(salary_responses(), data.frame(Job_Title = job_title_input, Experience_Level = experience_level, Response = response, stringsAsFactors = FALSE)))
     }
   })
-  
+ 
   output$salaryResponsesTable <- renderDT({
     salary_responses()
+  }, options = list(pageLength = 5, autoWidth = TRUE));
+
+  observe({
+    updateSelectInput(session, "job_title", choices = predicted_career_paths())
   })
-  
-  observeEvent(input$nextBtnGeminiPro, {
-    updateTabsetPanel(session, "tabs", selected = "Salary Prediction")
+ 
+  output$downloadSalaryResponses <- downloadHandler(
+    filename = function() {
+      paste("salary_responses_", Sys.Date(), ".csv", sep = "")
+    },
+    content = function(file) {
+      write.csv(salary_responses(), file, row.names = FALSE)
+    }
+  )
+ 
+  output$downloadChatbotResponses <- downloadHandler(
+    filename = function() {
+      paste("chatbot_responses_", Sys.Date(), ".csv", sep = "")
+    },
+    content = function(file) {
+      write.csv(chatbot_responses(), file, row.names = FALSE)
+    }
+  )
+ 
+  observeEvent(input$askQuestionBtn, {
+    req(input$userInput)
+   
+    user_text <- input$userInput
+    predicted_paths <- predicted_career_paths()
+   
+    response_data <- connectCareerToChatbot(user_text, predicted_paths, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")  
+   
+    chat_history(rbind(chat_history(), data.frame(Role = "User", Message = user_text, stringsAsFactors = FALSE)))
+   
+    if (!is.null(response_data$warning)) {
+      chat_history(rbind(chat_history(), data.frame(Role = "Bot", Message = response_data$warning, stringsAsFactors = FALSE)))
+    }
+   
+    chat_history(rbind(chat_history(), data.frame(Role = "Bot", Message = response_data$response, stringsAsFactors = FALSE)))
+    chatbot_responses(rbind(chatbot_responses(), data.frame(Question = user_text, Response = response_data$response, stringsAsFactors = FALSE)))
+   
+    updateTextAreaInput(session, "userInput", value = "")
+  });
+ 
+  output$chatOutputResponses <- renderDT({
+    chatbot_responses()
+  }, options = list(pageLength = 5, autoWidth = TRUE));
+ 
+  observeEvent(input$nextToWelcomeChatbot, {
+    updateTabsetPanel(session, "tabs", selected = "Welcome to Chatbot");
+  })
+ 
+  observeEvent(input$nextToGeminiChatbot, {
+    updateTabsetPanel(session, "tabs", selected = "Ask Question Gemini Chatbot");
+  })
+ 
+  observeEvent(input$nextToSalaryPage, {
+    updateTabsetPanel(session, "tabs", selected = "Salary Prediction");
+  })
+ 
+  observeEvent(input$nextToResumeBuilder, {
+    updateTabsetPanel(session, "tabs", selected = "Resume Builder");
+  })
+ 
+  observeEvent(input$generateResumeBtn, {
+    resume_data <- list(
+      Name = input$name,
+      Email = input$email,
+      Phone = input$phone,
+      LinkedIn = input$linkedin,
+      Location = input$location,
+      Summary = input$summary,
+      KeySkills = input$key_skills,
+      Education = list(
+        Degree = input$degree,
+        Institution = input$institution,
+        GraduationDate = input$graduation_date,
+        Coursework = input$coursework,
+        GPA = input$gpa
+      ),
+      Research = list(
+        Title = input$research_title,
+        Institution = input$research_institution,
+        Role = input$research_role,
+        Duration = input$research_duration,
+        Contributions = input$research_contributions
+      ),
+      Leadership = list(
+        Title = input$leadership_title,
+        Organization = input$leadership_org,
+        Duration = input$leadership_duration,
+        Responsibilities = input$leadership_responsibilities
+      ),
+      TechnicalSkills = list(
+        Languages = input$programming_languages,
+        Software = input$software_tools,
+        DataScience = input$data_science_tools,
+        Bioinformatics = input$bioinformatics_tools,
+        Others = input$other_skills
+      ),
+      Projects = list(
+        Title = input$project_title,
+        Tools = input$project_tools,
+        Duration = input$project_duration,
+        Description = input$project_description,
+        Outcomes = input$project_outcomes
+      ),
+      Publications = list(
+        Title = input$publication_title,
+        Conference = input$publication_conference,
+        Authors = input$publication_authors,
+        Date = input$publication_date,
+        Link = input$publication_link
+      ),
+      Honors = list(
+        AwardName = input$award_name,
+        Organization = input$award_org,
+        DateReceived = input$award_date
+      ),
+      Certifications = list(
+        Name = input$certification_name,
+        Organization = input$certifying_org,
+        DateEarned = input$certification_date
+      ),
+      Extracurriculars = list(
+        Name = input$extracurricular_name,
+        Role = input$extracurricular_role,
+        Duration = input$extracurricular_duration,
+        Achievements = input$extracurricular_achievements
+      ),
+      Languages = list(
+        Spoken = input$language_spoken,
+        Proficiency = input$language_proficiency
+      ),
+      References = list(
+        Name = input$reference_name,
+        Title = input$reference_title,
+        Organization = input$reference_org,
+        Contact = input$reference_contact
+      )
+    )
+
+    resume_text <- generateResume(resume_data, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")
+    output$resumeOutput <- renderText({ resume_text })
+  })
+
+  output$voiceControls <- renderUI({
+    if (input$input_method == "audio") {
+      tags$div(
+        actionButton("startVoiceBtn", "Start Voice Input", class = "btn-primary"),
+        actionButton("stopVoiceBtn", "Stop Voice Input", class = "btn-danger"),
+        tags$div(id = "stopwatch", "00:00:00"),
+        tags$script(HTML("
+          let recognition;
+          let final_transcript = '';
+          let timerInterval;
+          let stopwatchRunning = false;
+          let totalSeconds = 0;
+
+          function startRecognition() {
+            recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+            recognition.continuous = false;
+            recognition.interimResults = false;
+
+            recognition.onresult = function(event) {
+              final_transcript = event.results[0][0].transcript;
+              Shiny.setInputValue('voice_input', final_transcript);
+              respondToUser(final_transcript);
+            };
+
+            recognition.onerror = function(event) {
+              console.error('Recognition error', event.error);
+            };
+
+            recognition.onend = function() {
+            };
+
+            recognition.start();
+            startStopwatch();
+          }
+
+          function stopRecognition() {
+            if (recognition && recognition.stop) {
+              recognition.stop();
+            }
+            clearInterval(timerInterval);
+            stopwatchRunning = false;
+          }
+
+          function startStopwatch() {
+            if (!stopwatchRunning) {
+              totalSeconds = 0;
+              timerInterval = setInterval(updateStopwatch, 1000);
+              stopwatchRunning = true;
+            }
+          }
+
+          function updateStopwatch() {
+            totalSeconds++;
+            let hours = Math.floor(totalSeconds / 3600);
+            let minutes = Math.floor((totalSeconds % 3600) / 60);
+            let seconds = totalSeconds % 60;
+            document.getElementById('stopwatch').innerHTML =
+              (hours < 10 ? '0' + hours : hours) + ':' +
+              (minutes < 10 ? '0' + minutes : minutes) + ':' +
+              (seconds < 10 ? '0' + seconds : seconds);
+          }
+
+          function respondToUser(input) {
+            Shiny.setInputValue('userInput', input);
+            Shiny.setInputValue('askQuestionBtn', Math.random());
+          }
+
+          Shiny.addCustomMessageHandler('startRecognition', function(message) {
+            startRecognition();
+          });
+
+          Shiny.addCustomMessageHandler('stopRecognition', function(message) {
+            stopRecognition();
+          });
+        "))
+      )
+    }
+  })
+
+  observeEvent(input$startVoiceBtn, {
+    session$sendCustomMessage("startRecognition", list())
+  })
+
+  observeEvent(input$stopVoiceBtn, {
+    session$sendCustomMessage("stopRecognition", list())
+  })
+ 
+  observe({
+    disable <- !tabs_access()
+    for (i in seq_along(disable)) {
+      if (isTRUE(disable[i])) {
+        shinyjs::disable(paste0("tabs", i))
+      } else {
+        shinyjs::enable(paste0("tabs", i))
+      }
+    }
+  })
+
+  # Privacy Policy Modal
+  observeEvent(input$privacyPolicyClicked, {
     showModal(modalDialog(
-      title = "Salary Prediction Tab Instructions",
-      "1. Select your job title, experience level, and provide additional information as prompted.\n
-      2. Click 'Next' to see your predicted salary and distribution.\n
-      3. Visualizations will help you understand the salary landscape.",
-      easyClose = TRUE,
-      footer = NULL
+      title = "Privacy Policy",
+      tags$p("1. Introduction"),
+      tags$p("We value your privacy and are committed to protecting your personal information. This Privacy Policy outlines how we collect, use, disclose, and safeguard your data when you use our website and chatbot services."),
+      tags$p("2. Information We Collect"),
+      tags$p("2.1 Personal Information"),
+      tags$p("We may collect personal information that you voluntarily provide to us, such as your name, email address, and any other details you share when interacting with our chatbot."),
+      tags$p("2.2 Usage Data"),
+      tags$p("We automatically collect certain information about your use of our website and chatbot, including IP address, browser type, operating system, access times, and the pages you have viewed."),
+      tags$p("2.3 Cookies"),
+      tags$p("We use cookies and similar tracking technologies to enhance your experience on our website. Cookies are small data files stored on your device. You can manage your cookie preferences through your browser settings."),
+      tags$p("3. How We Use Your Information"),
+      tags$p("3.1 To Provide Services"),
+      tags$p("We use your personal information to provide, operate, and maintain our website and chatbot services."),
+      tags$p("3.2 To Improve Services"),
+      tags$p("We use the information to understand how our services are used, to improve our website and chatbot, and to develop new features."),
+      tags$p("3.3 To Communicate"),
+      tags$p("We may use your contact information to send you updates, promotional materials, or other communications related to our services."),
+      tags$p("3.4 For Security"),
+      tags$p("We use the information to detect, prevent, and address technical issues, fraud, and unauthorized access to our services."),
+      tags$p("4. Information Sharing and Disclosure"),
+      tags$p("Your information will not be shared with anyone except the research team. De-identified data (we will never share any of your identifying information) will be used in the publications that result from the research papers related to this project."),
+      tags$p("5. Data Security"),
+      tags$p("We implement appropriate technical and organizational measures to protect your personal information against accidental or unlawful destruction, loss, alteration, unauthorized disclosure, or access."),
+      tags$p("6. Your Data Rights"),
+      tags$p("6.1 Access and Correction"),
+      tags$p("You have the right to access and correct your personal information held by us. You may request access to or correction of your data by contacting us."),
+      tags$p("6.2 Deletion"),
+      tags$p("You have the right to request the deletion of your personal information, subject to certain legal obligations we may have to retain the data."),
+      tags$p("6.3 Data Portability"),
+      tags$p("You have the right to request a copy of your personal data in a structured, commonly used, and machine-readable format."),
+      tags$p("7. Third-Party Links"),
+      tags$p("Our website and chatbot may contain links to third-party websites. We are not responsible for the privacy practices or content of these external sites."),
+      tags$p("8. Changes to This Privacy Policy"),
+      tags$p("We may update this Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy on this page. You are advised to review this Privacy Policy periodically for any changes."),
+      footer = modalButton("Close")
     ))
   })
-  
-  observeEvent(input$userInput, {
-    if (current_question_index() > 1 && !answer_received()) {
-      response <- input$userInput
-      chat_history(rbind(chat_history(), data.frame(Role = "User", Message = response, stringsAsFactors = FALSE)))
-      
-      chat_history(rbind(chat_history(), data.frame(Role = "Bot", Message = paste("You answered:", response), stringsAsFactors = FALSE)))
-      answer_received(TRUE)
-      askCareerQuestions()
-    }
+ 
+  # Terms and Conditions Modal
+  observeEvent(input$termsAndConditionsClicked, {
+    showModal(modalDialog(
+      title = "Terms and Conditions",
+      tags$p("1. Acceptance of Terms"),
+      tags$p("By accessing and using this website and its chatbot services, you agree to comply with and be bound by the following terms and conditions. If you disagree with any part of these terms, please discontinue using this website and its chatbot services."),
+      tags$p("2. Use of Services"),
+      tags$p("2.1 Eligibility"),
+      tags$p("Users must be at least 18 years old or have parental/guardian consent to access our services."),
+      tags$p("2.2 Purpose"),
+      tags$p("The Future Engineer Assistant chatbot serves as a career guidance tool, providing information about job opportunities, career pathways, and related advice to assist users in making informed career decisions."),
+      tags$p("2.3 Personal Use"),
+      tags$p("These services are designed solely for personal, non-commercial use. Users agree to avoid using the services for any unlawful or unauthorized activities."),
+      tags$p("3. User Conduct"),
+      tags$p("3.1 Prohibited Activities"),
+      tags$p("Users agree to refrain from activities that:"),
+      tags$p("Contravene any applicable laws or regulations."),
+      tags$p("Infringe on the rights of others."),
+      tags$p("Interfere with the website or chatbot services' functionality."),
+      tags$p("3.2 Content Submission"),
+      tags$p("Any content submitted, such as questions and feedback, must be lawful and free from harmful elements, including viruses."),
+      tags$p("4. Privacy and Data Protection"),
+      tags$p("4.1 Data Collection"),
+      tags$p("We handle personal data in accordance with our Privacy Policy. By using the website and chatbot, users consent to this data processing."),
+      tags$p("4.2 Confidentiality"),
+      tags$p("We prioritize the confidentiality of user information but cannot guarantee absolute data security over the internet."),
+      tags$p("5. Intellectual Property"),
+      tags$p("5.1 Ownership"),
+      tags$p("All website content, including design, text, graphics, and other materials, is owned by or licensed to us. Unauthorized use is prohibited."),
+      tags$p("6. Disclaimer of Warranties"),
+      tags$p("6.1 As-Is Basis"),
+      tags$p("The website and chatbot services are provided 'as-is' and 'as-available' without any warranties, either express or implied."),
+      tags$p("6.2 Information Accuracy"),
+      tags$p("While the Future Engineer Assistant strives to deliver accurate career information, users are encouraged to validate key details through additional sources for a fully informed decision-making process."),
+      tags$p("7. Limitation of Liability"),
+      tags$p("7.1 Limitation"),
+      tags$p("To the maximum extent allowed by law, we are not liable for any direct, indirect, incidental, or consequential damages arising from website or chatbot use."),
+      tags$p("7.2 Indemnification"),
+      tags$p("Users agree to indemnify us against any claims, damages, or expenses arising from their use of the services or any violation of these terms."),
+      tags$p("8. Modifications to Terms"),
+      tags$p("We reserve the right to change these terms at any time. Changes are effective immediately upon posting on the website, and continued use of services indicates acceptance of the modified terms."),
+      tags$p("9. Termination"),
+      tags$p("We may terminate or suspend access to the website and chatbot services at our discretion without prior notice for actions believed to violate these terms or harm other users."),
+      tags$p("10. Information Accuracy Disclaimer"),
+      tags$p("The Future Engineer Assistant provides useful career and job information but may not always reflect the latest industry updates. Users are advised to verify critical details independently and consult with additional resources for career decisions."),
+      footer = modalButton("Close")
+    ))
   })
 }
 
-# Run the application 
 shinyApp(ui = ui, server = server)
-
-
