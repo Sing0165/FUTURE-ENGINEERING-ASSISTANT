@@ -5,7 +5,10 @@ library(jsonlite)
 library(plotly)
 library(shinyjs)
 library(digest)
+library(lubridate)
+library(visNetwork)  # Add the visNetwork library for interactive visualization
 
+# Functions
 getCareerPathSteps <- function(career_path, api_key) {
   prompt <- paste("List the steps required to reach the highest or chief level for the career path:", career_path)
   response <- generateContent(prompt, api_key)
@@ -84,13 +87,7 @@ isCareerRelated <- function(input_text, api_key) {
   }
 }
 
-# Add additional function for resume generation
-generateResume <- function(resume_data, api_key) {
-  prompt <- sprintf("Create a resume with the following information: %s", paste(unlist(resume_data), collapse = ", "))
-  resume_text <- generateContent(prompt, api_key)
-  return(resume_text)
-}
-
+# User Interface
 ui <- fluidPage(
   useShinyjs(),
   tags$style(HTML("
@@ -122,7 +119,6 @@ ui <- fluidPage(
   ")),
 
   # Title Section
-
   tags$div(class = "bubble-title", "Future Engineer Assistant - ShinyGeminiPro App"),
   tags$div(img(src = "cute_robot_logo.png", height = "100px", align = "center")),
 
@@ -208,7 +204,8 @@ ui <- fluidPage(
   # Main Content Section
   conditionalPanel(
     condition = "output.preSurveyCompleted",
-    tabsetPanel(id = "tabs", type = "hidden",
+    tabsetPanel(id = "tabs",
+                type = "hidden",
                 tabPanel("Research Overview",
                          fluidPage(
                            titlePanel(tags$div(class = "header-box", "Research Overview")),
@@ -344,8 +341,10 @@ ui <- fluidPage(
                              tags$p("3. You can also ask the bot questions regarding salaries or career inquiries."),
                              tags$p("4. Make sure to take note of the salary insights provided as they can inform your negotiations in future job offers."),
                              tags$hr(),
-                             selectInput("job_title", "Select Job Title *", choices = NULL),  
-                             selectInput("experience", "Select Experience Level *", choices = c("Entry Level", "Mid Level", "Senior Level")),
+                             selectInput("job_title", "Select Job Title *",
+                                         choices = NULL),  
+                             selectInput("experience", "Select Experience Level *",
+                                         choices = c("Entry Level", "Mid Level", "Senior Level")),
                              actionButton("askSalaryQuestions", "Get Salary Information", class = "btn-primary")
                            ),
                            mainPanel(
@@ -355,107 +354,22 @@ ui <- fluidPage(
                                       actionButton("loadingSalaryResponse", "Waiting for Response...", loading = TRUE, style = "display: none;"),
                                       plotlyOutput("salary_histogram"),
                                       plotlyOutput("salary_boxplot"),
-                                      actionButton("nextToResumeBuilder", "Next to Resume Builder", class = "btn-primary")
+                                      actionButton("nextToEndSession", "Next to End Session", class = "btn-primary")
                              )
                            )
                          )
                 ),
 
-                # Resume Builder Tab
-                tabPanel("Resume Builder",
-                         fluidPage(
-                           tags$h3("Resume Builder"),
-                           tags$div(
-                             textInput("name", "Name *"),
-                             textInput("email", "Email Address *"),
-                             textInput("phone", "Phone Number *"),
-                             textInput("linkedin", "LinkedIn Profile *"),
-                             textInput("location", "Location (Optional) *")
+                tabPanel("User Dashboard",
+                         sidebarLayout(
+                           sidebarPanel(
+                             tags$h4("Your Dashboard"),
+                             actionButton("viewChatHistory", "View Chat History", class = "btn-primary"),
+                             actionButton("viewCareerPaths", "View Career Paths", class = "btn-primary")
                            ),
-                           tags$div(
-                             textAreaInput("summary", "Professional Summary / Objective", placeholder = "Brief Summary of Career Goals or Objective"),
-                             textInput("key_skills", "Key Skills and Strengths")
-                           ),
-                           tags$h4("Education"),
-                           tags$div(
-                             textInput("degree", "Degree (e.g., Bachelor of Engineering in Computer Science)"),
-                             textInput("institution", "Institution Name *"),
-                             textInput("graduation_date", "Graduation Date (Expected or Completed) *"),
-                             textInput("coursework", "Relevant Coursework (Optional)"),
-                             textInput("gpa", "GPA (Optional)")
-                           ),
-                           tags$h4("Research Experience"),
-                           tags$div(
-                             textInput("research_title", "Research Title / Project Name"),
-                             textInput("research_institution", "Institution/Organization"),
-                             textInput("research_role", "Role/Position (e.g., Research Assistant)"),
-                             textInput("research_duration", "Duration (Start Date – End Date)"),
-                             textAreaInput("research_contributions", "Key Contributions and Results")
-                           ),
-                           tags$h4("Leadership & Team Experience"),
-                           tags$div(
-                             textInput("leadership_title", "Position Title (e.g., Team Lead, Project Manager)"),
-                             textInput("leadership_org", "Organization/Institution"),
-                             textInput("leadership_duration", "Duration (Start Date – End Date)"),
-                             textAreaInput("leadership_responsibilities", "Key Responsibilities and Achievements")
-                           ),
-                           tags$h4("Technical Skills"),
-                           tags$div(
-                             textInput("programming_languages", "Programming Languages (e.g., R, Python)"),
-                             textInput("software_tools", "Software/Tools (e.g., Power BI, R Shiny)"),
-                             textInput("data_science_tools", "Data Science/AI Tools (e.g., SVM, NLP)"),
-                             textInput("bioinformatics_tools", "Bioinformatics Tools (e.g., PCR, RNA sequencing)"),
-                             textInput("other_skills", "Other Relevant Skills")
-                           ),
-                           tags$h4("Projects"),
-                           tags$div(
-                             textInput("project_title", "Project Title"),
-                             textInput("project_tools", "Tools/Technologies Used"),
-                             textInput("project_duration", "Duration"),
-                             textAreaInput("project_description", "Description of the Project and Your Role"),
-                             textAreaInput("project_outcomes", "Outcomes or Results")
-                           ),
-                           tags$h4("Publications & Presentations"),
-                           tags$div(
-                             textInput("publication_title", "Title of Paper or Presentation"),
-                             textInput("publication_conference", "Journal/Conference Name"),
-                             textInput("publication_authors", "Authors"),
-                             textInput("publication_date", "Publication Date"),
-                             textInput("publication_link", "Link to the Publication (Optional)")
-                           ),
-                           tags$h4("Honors & Awards"),
-                           tags$div(
-                             textInput("award_name", "Award Name (e.g., Dean’s Honor Roll, HRAP Fellowship)"),
-                             textInput("award_org", "Institution/Organization"),
-                             textInput("award_date", "Date Received")
-                           ),
-                           tags$h4("Certifications"),
-                           tags$div(
-                             textInput("certification_name", "Certification Name (e.g., Data Science Certification)"),
-                             textInput("certifying_org", "Certifying Organization"),
-                             textInput("certification_date", "Date Earned")
-                           ),
-                           tags$h4("Extracurricular Involvement"),
-                           tags$div(
-                             textInput("extracurricular_name", "Organization/Club Name"),
-                             textInput("extracurricular_role", "Role/Position"),
-                             textInput("extracurricular_duration", "Duration"),
-                             textAreaInput("extracurricular_achievements", "Key Achievements or Contributions")
-                           ),
-                           tags$h4("Languages"),
-                           tags$div(
-                             textInput("language_spoken", "Language(s) Spoken"),
-                             textInput("language_proficiency", "Proficiency Level (e.g., Fluent, Intermediate)")
-                           ),
-                           tags$h4("References"),
-                           tags$div(
-                             textInput("reference_name", "Reference Name"),
-                             textInput("reference_title", "Title"),
-                             textInput("reference_org", "Institution/Organization"),
-                             textInput("reference_contact", "Contact Information (optional)")
-                           ),
-                           actionButton("generateResumeBtn", "Generate Resume", class = "btn-primary"),
-                           verbatimTextOutput("resumeOutput")
+                           mainPanel(
+                             tags$div(id = "dashboardOutput")
+                           )
                          )
                 ),
 
@@ -468,8 +382,18 @@ ui <- fluidPage(
                                     a(href = "https://ousurvey.qualtrics.com/jfe/form/SV_3n3jlqsnkoMkn0W", target = "_blank", "Click here to take the survey:", style = "font-weight: bold; color: #841617; text-decoration: underline;")
                            )
                          )
+                ),
+
+                # New Interactive Career Path Visualization
+                tabPanel("Career Path Visualization",
+                         fluidPage(
+                           titlePanel("Explore Your Career Path"),
+                           tags$div("Select a career path to see the details."),
+                           uiOutput("careerPathSelector"),
+                           visNetworkOutput("careerPathNetwork")
+                         )
                 )
-               )
+                )
       )
 )
 
@@ -487,7 +411,10 @@ server <- function(input, output, session) {
   recommended_careers <- reactiveVal(NULL)
   predicted_career_paths <- reactiveVal(NULL)
 
-  tabs_access <- reactiveVal(c(FALSE, FALSE, FALSE, FALSE, FALSE, FALSE))
+  user_chat_history <- reactiveVal(data.frame(Date = character(), Chat = character(), stringsAsFactors = FALSE))
+  user_career_paths <- reactiveVal(data.frame(Date = character(), Career_Path = character(), stringsAsFactors = FALSE))
+
+  tabs_access <- reactiveVal(c(FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE))
 
   observeEvent(input$registerBtn, {
     required_fields <- c(input$first_name, input$last_name, input$username, input$reg_password,
@@ -554,17 +481,17 @@ server <- function(input, output, session) {
   observeEvent(input$confirmSurveyBtn, {
     if (input$preSurveyCheck) {
       preSurveyCompleted(TRUE)
-      tabs_access(c(TRUE, FALSE, FALSE, FALSE, FALSE, FALSE))  
+      tabs_access(c(TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE))  
     }
   })
  
   observeEvent(input$continueToInstructions, {
-    tabs_access(c(TRUE, TRUE, FALSE, FALSE, FALSE, FALSE))  
+    tabs_access(c(TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE))  
     updateTabsetPanel(session, "tabs", selected = "Instructions")
   })
  
   observeEvent(input$continueToChatbot, {
-    tabs_access(c(TRUE, TRUE, TRUE, FALSE, FALSE, FALSE))  
+    tabs_access(c(TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE))  
     updateTabsetPanel(session, "tabs", selected = "Career Path Prediction")
     resetChat()
   })
@@ -584,6 +511,8 @@ server <- function(input, output, session) {
       if (any(user$Username == input$login_username & user$Password == hashed_login_password)) {
         loggedIn(TRUE)
         resetChat()
+        # Show History tab after logging in and completing the app
+        tabs_access(c(TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE))  # Allow access to History
       } else {
         showModal(modalDialog(
           title = "Login Error",
@@ -611,18 +540,18 @@ server <- function(input, output, session) {
     registered(FALSE)
     loggedIn(FALSE)
   })
- 
+
   resetChat <- function() {
     current_question_index(1)
     chat_history(data.frame(Role = character(), Message = character(), stringsAsFactors = FALSE))
     chatbot_responses(data.frame(Question = character(), Response = character(), stringsAsFactors = FALSE))
     recommended_careers(NULL)
     predicted_career_paths(NULL)  
-    questions <- generateCareerQuestions(api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")  
+    questions <- generateCareerQuestions(api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")  # Insert your real API key here
     randomized_questions(questions)
     askCareerQuestions()
   }
- 
+
   askCareerQuestions <- function() {
     if (current_question_index() <= length(randomized_questions())) {
       question <- randomized_questions()[current_question_index()]
@@ -647,7 +576,7 @@ server <- function(input, output, session) {
     }
     return(NULL)  # Default return no error message
   })
- 
+
   observeEvent(input$submitAnswerBtn, {
     req(input$chatbotAnswerInput)
     answer_text <- input$chatbotAnswerInput
@@ -661,7 +590,7 @@ server <- function(input, output, session) {
     askCareerQuestions()
     updateTextAreaInput(session, "chatbotAnswerInput", value = "")
   })
- 
+
   output$questionsProgress <- renderUI({
     answered <- current_question_index() - 1  
     total <- length(randomized_questions())
@@ -674,21 +603,24 @@ server <- function(input, output, session) {
              )
     )
   })
- 
+
   output$predictedCareerPaths <- renderUI({
     if (current_question_index() > length(randomized_questions())) {
       actionButton("nextToGlimpse", "Next to See Predicted Career Paths", class = "btn-primary")
     }
   })
- 
+
   observeEvent(input$nextToGlimpse, {
     user_answers <- unlist(chat_history()[chat_history()$Role == "User", "Message"])
     predicted_career_paths(predictCareerPaths(user_answers, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ"))  
    
-    tabs_access(c(TRUE, TRUE, TRUE, TRUE, FALSE, FALSE))  
+    # Save career paths for the user
+    user_career_paths(rbind(user_career_paths(), data.frame(Date = Sys.Date(), Career_Path = paste(predicted_career_paths(), collapse = ", "), stringsAsFactors = FALSE)))
+
+    tabs_access(c(TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE))  
     updateTabsetPanel(session, "tabs", selected = "Quick Glimpse")
   })
- 
+
   output$predictedCareerPathsTable <- renderDT({
     req(predicted_career_paths())
     
@@ -710,11 +642,11 @@ server <- function(input, output, session) {
     chat_data <- chat_history()
     dataTableOutput("chatDataTable")
   })
- 
+
   output$chatDataTable <- renderDataTable({
     chat_history()
   }, options = list(pageLength = 1, autoWidth = TRUE))
- 
+
   observeEvent(input$askSalaryQuestions, {
     job_title_input <- input$job_title
     experience_level <- input$experience
@@ -724,7 +656,7 @@ server <- function(input, output, session) {
       salary_responses(rbind(salary_responses(), data.frame(Job_Title = job_title_input, Experience_Level = experience_level, Response = response, stringsAsFactors = FALSE)))
     }
   })
- 
+
   output$salaryResponsesTable <- renderDT({
     salary_responses()
   }, options = list(pageLength = 5, autoWidth = TRUE));
@@ -732,7 +664,7 @@ server <- function(input, output, session) {
   observe({
     updateSelectInput(session, "job_title", choices = predicted_career_paths())
   })
- 
+
   output$downloadSalaryResponses <- downloadHandler(
     filename = function() {
       paste("salary_responses_", Sys.Date(), ".csv", sep = "")
@@ -741,7 +673,7 @@ server <- function(input, output, session) {
       write.csv(salary_responses(), file, row.names = FALSE)
     }
   )
- 
+
   output$downloadChatbotResponses <- downloadHandler(
     filename = function() {
       paste("chatbot_responses_", Sys.Date(), ".csv", sep = "")
@@ -750,7 +682,7 @@ server <- function(input, output, session) {
       write.csv(chatbot_responses(), file, row.names = FALSE)
     }
   )
- 
+
   observeEvent(input$askQuestionBtn, {
     req(input$userInput)
    
@@ -767,110 +699,56 @@ server <- function(input, output, session) {
    
     chat_history(rbind(chat_history(), data.frame(Role = "Bot", Message = response_data$response, stringsAsFactors = FALSE)))
     chatbot_responses(rbind(chatbot_responses(), data.frame(Question = user_text, Response = response_data$response, stringsAsFactors = FALSE)))
-   
+
+    # Save chat history for the user
+    user_chat_history(rbind(user_chat_history(), data.frame(Date = Sys.Date(), Chat = user_text, stringsAsFactors = FALSE)))
+
     updateTextAreaInput(session, "userInput", value = "")
   });
- 
+
   output$chatOutputResponses <- renderDT({
     chatbot_responses()
   }, options = list(pageLength = 5, autoWidth = TRUE));
- 
+
   observeEvent(input$nextToWelcomeChatbot, {
     updateTabsetPanel(session, "tabs", selected = "Welcome to Chatbot");
   })
- 
+
   observeEvent(input$nextToGeminiChatbot, {
     updateTabsetPanel(session, "tabs", selected = "Ask Question Gemini Chatbot");
   })
- 
+
   observeEvent(input$nextToSalaryPage, {
     updateTabsetPanel(session, "tabs", selected = "Salary Prediction");
   })
- 
-  observeEvent(input$nextToResumeBuilder, {
-    updateTabsetPanel(session, "tabs", selected = "Resume Builder");
-  })
- 
-  observeEvent(input$generateResumeBtn, {
-    resume_data <- list(
-      Name = input$name,
-      Email = input$email,
-      Phone = input$phone,
-      LinkedIn = input$linkedin,
-      Location = input$location,
-      Summary = input$summary,
-      KeySkills = input$key_skills,
-      Education = list(
-        Degree = input$degree,
-        Institution = input$institution,
-        GraduationDate = input$graduation_date,
-        Coursework = input$coursework,
-        GPA = input$gpa
-      ),
-      Research = list(
-        Title = input$research_title,
-        Institution = input$research_institution,
-        Role = input$research_role,
-        Duration = input$research_duration,
-        Contributions = input$research_contributions
-      ),
-      Leadership = list(
-        Title = input$leadership_title,
-        Organization = input$leadership_org,
-        Duration = input$leadership_duration,
-        Responsibilities = input$leadership_responsibilities
-      ),
-      TechnicalSkills = list(
-        Languages = input$programming_languages,
-        Software = input$software_tools,
-        DataScience = input$data_science_tools,
-        Bioinformatics = input$bioinformatics_tools,
-        Others = input$other_skills
-      ),
-      Projects = list(
-        Title = input$project_title,
-        Tools = input$project_tools,
-        Duration = input$project_duration,
-        Description = input$project_description,
-        Outcomes = input$project_outcomes
-      ),
-      Publications = list(
-        Title = input$publication_title,
-        Conference = input$publication_conference,
-        Authors = input$publication_authors,
-        Date = input$publication_date,
-        Link = input$publication_link
-      ),
-      Honors = list(
-        AwardName = input$award_name,
-        Organization = input$award_org,
-        DateReceived = input$award_date
-      ),
-      Certifications = list(
-        Name = input$certification_name,
-        Organization = input$certifying_org,
-        DateEarned = input$certification_date
-      ),
-      Extracurriculars = list(
-        Name = input$extracurricular_name,
-        Role = input$extracurricular_role,
-        Duration = input$extracurricular_duration,
-        Achievements = input$extracurricular_achievements
-      ),
-      Languages = list(
-        Spoken = input$language_spoken,
-        Proficiency = input$language_proficiency
-      ),
-      References = list(
-        Name = input$reference_name,
-        Title = input$reference_title,
-        Organization = input$reference_org,
-        Contact = input$reference_contact
-      )
-    )
 
-    resume_text <- generateResume(resume_data, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")
-    output$resumeOutput <- renderText({ resume_text })
+  observeEvent(input$nextToEndSession, {
+    updateTabsetPanel(session, "tabs", selected = "Session Completed");
+  })
+
+  observeEvent(input$viewCareerPaths, {
+    output$dashboardOutput <- renderUI({
+      DT::datatable(user_career_paths(), options = list(pageLength = 5, autoWidth = TRUE))
+    })
+  })
+
+  observeEvent(input$utilizeAppAgain, {
+          updateTabsetPanel(session, "tabs", selected = "Research Overview")
+  })
+  
+  output$chatHistoryTable <- renderDT({
+      req(user_chat_history())
+      datatable(user_chat_history(), options = list(pageLength = 5, autoWidth = TRUE))
+  })
+  
+  output$careerPathsTable <- renderDT({
+      req(user_career_paths())
+      datatable(user_career_paths(), options = list(pageLength = 5, autoWidth = TRUE))
+  })
+  
+  output$salaryResponsesHistoryTable <- renderDT({
+      req(salary_responses())
+      datatable(salary_responses(), options = list(pageLength = 5, autoWidth = TRUE))
   })
 
   output$voiceControls <- renderUI({
@@ -1059,6 +937,29 @@ server <- function(input, output, session) {
       tags$p("The Future Engineer Assistant provides useful career and job information but may not always reflect the latest industry updates. Users are advised to verify critical details independently and consult with additional resources for career decisions."),
       footer = modalButton("Close")
     ))
+  })
+
+  # New Interactive Career Path Visualization Logic
+  output$careerPathSelector <- renderUI({
+    req(predicted_career_paths())
+    selectInput("selected_career", "Select a Career Path", choices = predicted_career_paths())
+  })
+
+  output$careerPathNetwork <- renderVisNetwork({
+    req(input$selected_career)
+    selected_career <- input$selected_career
+    # Example data structure for the career paths can be replaced with your own
+    career_steps <- getCareerPathSteps(selected_career, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")  # Replace with actual API key
+
+    # Create nodes and edges
+    nodes <- data.frame(id = 1:length(career_steps), label = career_steps)
+    edges <- data.frame(from = c(rep(1, length(career_steps)-1)), to = 2:length(career_steps))
+
+    visNetwork(nodes, edges) %>%
+      visNodes(shape = "box") %>%
+      visEdges(arrows = "to") %>%
+      visOptions(highlightNearest = TRUE) %>%
+      visLayout(randomSeed = 123)
   })
 }
 
