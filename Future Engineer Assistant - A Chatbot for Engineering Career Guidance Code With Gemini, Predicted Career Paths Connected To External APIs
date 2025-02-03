@@ -1,7 +1,6 @@
 library(httr)
 library(shiny)
 library(DT)
-library(httr)
 library(jsonlite)
 library(plotly)
 library(shinyjs)
@@ -309,7 +308,8 @@ ui <- fluidPage(
                              radioButtons("input_method", "Choose Input Method:",
                                           choices = list("Text" = "text", "Audio Recording" = "audio"),
                                           inline = TRUE,
-                                          selected = "text"),
+                                          selected = "text",
+                                          width = '100%'),
                              uiOutput("voiceControls")
                            ),
                            mainPanel(
@@ -630,7 +630,9 @@ server <- function(input, output, session) {
     
     # Create a clean data frame for display
     df <- data.frame(Career_Path = predicted_career_paths(), stringsAsFactors = FALSE)
-    datatable(df, options = list(pageLength = 5, autoWidth = TRUE), rownames = FALSE)
+    datatable(df, options = list(pageLength = 5, autoWidth = TRUE, 
+                                  columnDefs = list(list(className = 'dt-left', targets = 0))), 
+              rownames = FALSE)
   })
 
   output$downloadCareerPaths <- downloadHandler(
@@ -692,9 +694,9 @@ server <- function(input, output, session) {
    
     user_text <- input$userInput
     predicted_paths <- predicted_career_paths()
-   
+    
     response_data <- connectCareerToChatbot(user_text, predicted_paths, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")  
-   
+    
     chat_history(rbind(chat_history(), data.frame(Role = "User", Message = user_text, stringsAsFactors = FALSE)))
 
     if (!is.null(response_data$warning)) {
@@ -737,22 +739,22 @@ server <- function(input, output, session) {
   })
 
   observeEvent(input$utilizeAppAgain, {
-          updateTabsetPanel(session, "tabs", selected = "Research Overview")
+    updateTabsetPanel(session, "tabs", selected = "Research Overview")
   })
   
   output$chatHistoryTable <- renderDT({
-      req(user_chat_history())
-      datatable(user_chat_history(), options = list(pageLength = 5, autoWidth = TRUE))
+    req(user_chat_history())
+    datatable(user_chat_history(), options = list(pageLength = 5, autoWidth = TRUE))
   })
   
   output$careerPathsTable <- renderDT({
-      req(user_career_paths())
-      datatable(user_career_paths(), options = list(pageLength = 5, autoWidth = TRUE))
+    req(user_career_paths())
+    datatable(user_career_paths(), options = list(pageLength = 5, autoWidth = TRUE))
   })
   
   output$salaryResponsesHistoryTable <- renderDT({
-      req(salary_responses())
-      datatable(salary_responses(), options = list(pageLength = 5, autoWidth = TRUE))
+    req(salary_responses())
+    datatable(salary_responses(), options = list(pageLength = 5, autoWidth = TRUE))
   })
 
   output$voiceControls <- renderUI({
@@ -831,6 +833,8 @@ server <- function(input, output, session) {
           });
         "))
       )
+    } else {
+      tags$div()  # Returns nothing for text input
     }
   })
 
@@ -946,7 +950,7 @@ server <- function(input, output, session) {
   # New Interactive Career Path Visualization Logic
   output$careerPathSelector <- renderUI({
     req(predicted_career_paths())
-    selectInput("selected_career", "Select a Career Path", choices = predicted_career_paths())
+    selectInput("selected_career", "Select a Career Path", choices = predicted_career_paths(), selected = predicted_career_paths()[1]) # Set default selection to first career path
   })
 
   output$careerPathNetwork <- renderVisNetwork({
