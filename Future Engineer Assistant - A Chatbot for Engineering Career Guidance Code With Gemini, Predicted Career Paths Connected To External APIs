@@ -6,7 +6,7 @@ library(plotly)
 library(shinyjs)
 library(digest)
 library(lubridate)
-library(visNetwork)  # Add the visNetwork library for interactive visualization
+library(visNetwork)
 
 # Functions
 getCareerPathSteps <- function(career_path, api_key) {
@@ -38,7 +38,7 @@ predictCareerPaths <- function(answers, api_key) {
     return(NULL)
   }
  
-  prompt <- paste("Based on the following user responses, please suggest 5 very specific career paths for an engineering student: ", paste(answers, collapse = " "))
+  prompt <- paste("Based on the following user responses, please suggest 5 very specific career paths for an engineering student:", paste(answers, collapse = " "))
   response <- generateContent(prompt, api_key)
   return(unlist(strsplit(response, ",")))
 }
@@ -63,11 +63,9 @@ saveUserData <- function(user_data) {
 connectCareerToChatbot <- function(input_question, predicted_paths, api_key) {
   if (any(grepl("major|subject|study|education|field|college", input_question, ignore.case = TRUE))) {
     career_paths_string <- paste(predicted_paths, collapse = ", ")
-    response <- generateContent(paste("Given the predicted career paths: ", career_paths_string,
-                                       ". What majors or educational paths should I consider?"), api_key)
+    response <- generateContent(paste("Given the predicted career paths:", career_paths_string, ". What majors or educational paths should I consider?"), api_key)
   } else if (any(grepl("career|job|path|profession|engineer|engineering", input_question, ignore.case = TRUE))) {
-    response <- generateContent(paste("Based on the predicted career paths: ", paste(predicted_paths, collapse = ", "),
-                                       "Please provide advice on this question: ", input_question), api_key)
+    response <- generateContent(paste("Based on the predicted career paths:", paste(predicted_paths, collapse = ", "), "Please provide advice on this question:", input_question), api_key)
   } else {
     warning_text <- "Your question doesn't seem to relate to career paths. However, here's the information you've requested:"
     response <- generateContent(input_question, api_key)
@@ -286,7 +284,7 @@ ui <- fluidPage(
                          )
                 ),
 
-                tabPanel("Welcome to Chatbot",
+                                tabPanel("Welcome to Chatbot",
                          fluidPage(
                            tags$div(class = "welcome-box",
                                     h3("Welcome to Gemini Chatbot"),
@@ -300,6 +298,7 @@ ui <- fluidPage(
                            )
                          )
                 ),
+
 
                 tabPanel("Ask Question Gemini Chatbot",
                          sidebarLayout(
@@ -316,7 +315,7 @@ ui <- fluidPage(
                              tags$div(class = "pink-box",
                                       tags$p("You can ask the chatbot any questions regarding career-related topics."),
                                       tags$p("Type your question or use the 'Ask by Audio' feature for a more hands-free interaction."),
-                                      div(class = "color-bubble", textAreaInput("userInput", "Ask your question here:", placeholder = "Type your question here...", rows = 4)),
+                                      uiOutput("userInputUI"),
                                       tags$hr(),
                                       tags$h4("Responses"),
                                       div(class = "chat-history",
@@ -510,7 +509,6 @@ server <- function(input, output, session) {
       if (any(user$Username == input$login_username & user$Password == hashed_login_password)) {
         loggedIn(TRUE)
         resetChat()
-        # Show History tab after logging in and completing the app
         tabs_access(c(TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE))  # Allow access to History
       } else {
         showModal(modalDialog(
@@ -546,7 +544,7 @@ server <- function(input, output, session) {
     chatbot_responses(data.frame(Question = character(), Response = character(), stringsAsFactors = FALSE))
     recommended_careers(NULL)
     predicted_career_paths(NULL)  
-    questions <- generateCareerQuestions(api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")  # Insert your real API key here
+    questions <- generateCareerQuestions(api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")
     randomized_questions(questions)
     askCareerQuestions()
   }
@@ -575,10 +573,10 @@ server <- function(input, output, session) {
       answer_text <- input$chatbotAnswerInput
       if (!isCareerRelated(answer_text, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")) {
         return(tags$div(class = "rect-bubble",
-                        paste("You have not answered what the question asked: ", last_question)))
+                        paste("You have not answered what the question asked:", last_question)))
       }
     }
-    return(NULL)  # Default return no error message
+    return(NULL)
   })
 
   observeEvent(input$submitAnswerBtn, {
@@ -618,7 +616,6 @@ server <- function(input, output, session) {
     user_answers <- unlist(chat_history()[chat_history()$Role == "User", "Message"])
     predicted_career_paths(predictCareerPaths(user_answers, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ"))  
    
-    # Save career paths for the user
     user_career_paths(rbind(user_career_paths(), data.frame(Date = Sys.Date(), Career_Path = paste(predicted_career_paths(), collapse = ", "), stringsAsFactors = FALSE)))
 
     tabs_access(c(TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE))  
@@ -627,9 +624,9 @@ server <- function(input, output, session) {
 
   output$predictedCareerPathsTable <- renderDT({
     req(predicted_career_paths())
-    
+
     # Create a clean data frame for display
-    df <- data.frame(Career_Path = predicted_career_paths(), stringsAsFactors = FALSE)
+    df <- data.frame(Career_Path = paste0("**", predicted_career_paths(), "**"), stringsAsFactors = FALSE)
     datatable(df, options = list(pageLength = 5, autoWidth = TRUE, 
                                   columnDefs = list(list(className = 'dt-left', targets = 0))), 
               rownames = FALSE)
@@ -644,14 +641,13 @@ server <- function(input, output, session) {
     }
   );
 
-  output$chatOutput <- renderUI({
-    chat_data <- chat_history()
-    dataTableOutput("chatDataTable")
+  output$userInputUI <- renderUI({
+    if (input$input_method == "audio") {
+      textAreaInput("userInputAudio", "Ask your question via Audio:", placeholder = "Audio input...", rows = 4)
+    } else {
+      textAreaInput("userInput", "Ask your question here:", placeholder = "Type your question here...", rows = 4)
+    }
   })
-
-  output$chatDataTable <- renderDataTable({
-    chat_history()
-  }, options = list(pageLength = 1, autoWidth = TRUE))
 
   observeEvent(input$askSalaryQuestions, {
     job_title_input <- input$job_title
@@ -706,7 +702,6 @@ server <- function(input, output, session) {
     chat_history(rbind(chat_history(), data.frame(Role = "Bot", Message = response_data$response, stringsAsFactors = FALSE)))
     chatbot_responses(rbind(chatbot_responses(), data.frame(Question = user_text, Response = response_data$response, stringsAsFactors = FALSE)))
 
-    # Save chat history for the user
     user_chat_history(rbind(user_chat_history(), data.frame(Date = Sys.Date(), Chat = user_text, stringsAsFactors = FALSE)))
 
     updateTextAreaInput(session, "userInput", value = "")
@@ -738,18 +733,9 @@ server <- function(input, output, session) {
     })
   })
 
-  observeEvent(input$utilizeAppAgain, {
-    updateTabsetPanel(session, "tabs", selected = "Research Overview")
-  })
-  
   output$chatHistoryTable <- renderDT({
     req(user_chat_history())
     datatable(user_chat_history(), options = list(pageLength = 5, autoWidth = TRUE))
-  })
-  
-  output$careerPathsTable <- renderDT({
-    req(user_career_paths())
-    datatable(user_career_paths(), options = list(pageLength = 5, autoWidth = TRUE))
   })
   
   output$salaryResponsesHistoryTable <- renderDT({
@@ -956,11 +942,10 @@ server <- function(input, output, session) {
   output$careerPathNetwork <- renderVisNetwork({
     req(input$selected_career)
     selected_career <- input$selected_career
-    # Example data structure for the career paths can be replaced with your own
     career_steps <- getCareerPathSteps(selected_career, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")  # Replace with actual API key
 
     # Create nodes and edges
-    nodes <- data.frame(id = 1:length(career_steps), label = career_steps)
+    nodes <- data.frame(id = 1:length(career_steps), label = career_steps, stringsAsFactors = FALSE)
     edges <- data.frame(from = c(rep(1, length(career_steps)-1)), to = 2:length(career_steps))
 
     visNetwork(nodes, edges) %>%
