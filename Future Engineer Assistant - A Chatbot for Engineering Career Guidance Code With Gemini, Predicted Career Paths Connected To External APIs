@@ -111,7 +111,7 @@ ui <- fluidPage(
     .step-box { padding: 15px; border: 2px solid #841617; border-radius: 15px; background-color: rgba(255, 255, 255, 0.9); margin-bottom: 20px; }
     .sticky-title { position: sticky; top: 0; background-color: #841617; color: white; padding: 10px; }
     .completion-box { border: 2px solid #841617; border-radius: 15px; padding: 20px; background-color: rgba(255, 255, 255, 0.9); text-align: center; margin-top: 20px; }
-    .important-link { font-size: 18px; font-weight: bold; color: #ffcc00; text-align: center; margin-top: 10px; }
+    .important-link { font-size: 18px; font-weight: bold; color: #007bff; text-align: center; margin-top: 10px; } /* Changed color to blue */
     .centered-congratulation { text-align: center; font-size: 28px; }
     .career-path { margin-bottom: 10px; }
   ")),
@@ -130,7 +130,9 @@ ui <- fluidPage(
                passwordInput("login_password", "Password *"),
                actionButton("loginBtn", "Login", class = "btn-primary"),
                tags$div(style = "text-align: center; margin-top: 10px,",
-                        tags$a(href = "#", onclick = "Shiny.setInputValue('navigateToRegistration', 1); return false;", "Don't have an account? Sign up", style = "margin-right: 15px;")
+                        tags$a(href = "#", onclick = "Shiny.setInputValue('navigateToRegistration', 1); return false;", "Don't have an account? Sign up", style = "margin-right: 15px;"),
+                        tags$a(href = "#", onclick = "Shiny.setInputValue('termsAndConditionsClicked', 1); return false;", "Terms and Conditions", style = "margin-right: 15px;"),
+                        tags$a(href = "#", onclick = "Shiny.setInputValue('privacyPolicyClicked', 1); return false;", "Privacy Policy")
                )
       )
     )
@@ -184,12 +186,12 @@ ui <- fluidPage(
       tags$div(class = "registration-box",
                h3("Pre-Survey Confirmation"),
                tags$p("Please confirm that you have completed the pre-survey."),
-               tags$p("Please complete this survey and contact me (akshay.singh-1@ou.edu) to ask any questions you may have BEFORE agreeing to participate in my research."),
+               tags$p("Complete this survey and contact me (akshay.singh-1@ou.edu) to ask any questions regarding participation in the research."),
                tags$p("What is the purpose of this research? This research aims to understand engineering students’ perceptions on the use of an AI platform to select their career path."),
                tags$p("How many participants will be in this research? About 300 people will take part in this research."),
                tags$p("What will participants be asked to do? If you agree to be in this research, you will be required to complete three tasks:
                        1. Complete a pre-survey (5–7-minute online survey)
-                       2. Interact with the chatbot and obtain predicted career paths (5–30-minute online platform)
+                       2. Interact with the chatbot to obtain predicted career paths (5–30-minute online platform)
                        3. Complete a post-survey (5–7-minute online survey)"),
                tags$a(href = "https://ousurvey.qualtrics.com/jfe/form/SV_0wBJjQYoTv2v0ii", target = "_blank",
                       class = "important-link", "Complete Pre-Survey"),
@@ -204,54 +206,36 @@ ui <- fluidPage(
     condition = "output.preSurveyCompleted",
     tabsetPanel(id = "tabs",
                 type = "hidden",
-                tabPanel("Research Overview",
+                tabPanel("Introduction",
                          fluidPage(
-                           titlePanel(tags$div(class = "header-box", "Research Overview")),
+                           titlePanel(tags$div(class = "header-box", "Introduction")),
                            tags$div(class = "welcome-box",
-                                    h3("Research Overview"),
-                                    p("As the field of engineering continues to grow, undergraduate and graduate students are presented with a wide range of career choices, making it all the more challenging to decide the path that is best suited for them. To assist these students in making well-informed decisions, our project’s aim is to establish an interactive chatbot which is tailored specifically for engineering undergraduates/graduates."),
-                                    p("By leveraging natural language processing and generative AI technologies, this bot will engage students in personalized conversations, align their current skill set with the best suitable careers, and provide customized guidance to help navigate their professional choices efficiently and effectively."),
-                                    actionButton("continueToInstructions", "Next", class = "btn-primary")
-                           )
-                         )
-                ),
-
-                tabPanel("Instructions",
-                         fluidPage(
-                           titlePanel(tags$div(class = "header-box", "Instructions")),
-                           fluidRow(
-                             column(6,
+                                    h3("Introduction"),
+                                    p("As the field of engineering continues to grow, undergraduate and graduate students face numerous career choices, making it challenging to decide on the best path. This project’s aim is to establish an interactive chatbot tailored specifically for engineering undergraduates/graduates."),
+                                    p("By leveraging natural language processing and generative AI technologies, the bot engages students in personalized conversations, aligning current skill sets with suitable careers, and providing customized guidance for navigating professional choices."),
                                     tags$div(class = "instructions-box",
                                              h3("Instructions:"),
                                              tags$div(class = "step-box",
                                                       tags$h4("Step One:"),
-                                                      tags$p("Answer 10 free response questions generated by the Gemini API designed to gather initial information about your interests and remove bias. By doing so, the chatbot is able to consider your individual responses and preferences, leading to more tailored career recommendations.")
+                                                      tags$p("Answer 10 free response questions generated by the Gemini API, designed to gather initial information about interests and preferences. This allows the chatbot to provide tailored career recommendations."),
                                              ),
                                              tags$div(class = "step-box",
                                                       tags$h4("Step Two:"),
-                                                      tags$p("Once you obtain your predicted career paths, move to Ask Question in the Gemini Chatbot. The bot will allow users to ask any career-related questions via text or audio. The bot will then analyze your responses and quickly provide you with personalized career recommendations.")
+                                                      tags$p("Upon receiving predicted career paths, move to the Ask Question section in the Gemini Chatbot. The chatbot enables users to inquire about any career-related topics."),
                                              )
-                                    )
-                             ),
-                             column(6,
-                                    tags$div(class = "instructions-box",
-                                             h3("Additional Notes:"),
-                                             tags$p("Ensure that you provide thoughtful and detailed responses to help the chatbot generate accurate suggestions."),
-                                             tags$p("Feel free to ask the chatbot about specific careers, educational paths, or skills required, so you can be well-prepared for your journey.")
-                                    )
-                             )
-                           ),
-                           actionButton("continueToChatbot", "Accept & Proceed to Chatbot", class = "btn-primary")
+                                    ),
+                                    actionButton("continueToQuestionnaire", "Next to Questionnaire", class = "btn-primary")
+                           )
                          )
                 ),
 
-                tabPanel("Career Path Prediction",
+                tabPanel("Questionnaire",
                          sidebarLayout(
                            sidebarPanel(
                              tags$h4("Instructions"),
-                             tags$p("1. Start by answering the questions that the bot will ask you, which are essential for personalized career recommendations."),
-                             tags$p("2. Upon answering all questions, you will receive a list of recommended career paths tailored to your skills and preferences."),
-                             tags$p("3. You can later ask the bot any career-related inquiries to gather more information."),
+                             tags$p("1. Answer the generated questions to receive personalized career recommendations."),
+                             tags$p("2. Once all questions are answered, a list of recommended career paths will be provided."),
+                             tags$p("3. Feel free to click submit without leaving questions blank, but be mindful that a warning will appear."),
                              tags$hr(),
                              uiOutput("questionsProgress")
                            ),
@@ -276,7 +260,7 @@ ui <- fluidPage(
                          fluidPage(
                            tags$div(class = "completion-box",
                                     h2("Quick Glimpse"),
-                                    p("Based on the options you selected, we've created a personalized summary of your preferences and interests. It appears that your choices align with the following themes:"),
+                                    p("Based on the options selected, a personalized summary of preferences and interests has been created. It appears that the choices align with the following themes:"),
                                     DTOutput("predictedCareerPathsTable"),
                                     downloadButton("downloadCareerPaths", "Download Predicted Career Paths CSV", class = "btn-primary"),
                                     actionButton("nextToWelcomeChatbot", "Next to Welcome Chatbot", class = "btn-primary")
@@ -284,21 +268,17 @@ ui <- fluidPage(
                          )
                 ),
 
-                                tabPanel("Welcome to Chatbot",
+                tabPanel("Welcome to Chatbot",
                          fluidPage(
                            tags$div(class = "welcome-box",
                                     h3("Welcome to Gemini Chatbot"),
                                     tags$div(img(src = "https://png.pngtree.com/png-clipart/20230401/original/pngtree-smart-chatbot-cartoon-clipart-png-image_9015126.png", height = "200px", align = "center")),
-                                    p("The Future Engineer Assistant (FEA) is an innovative AI-powered chatbot designed specifically to provide personalized career guidance for engineering students. By leveraging advanced natural language processing (NLP) and generative AI technologies, the FEA engages users in dynamic, interactive conversations that facilitate the exploration of potential career paths. Unlike traditional career counseling methods, which can be limited in personalization and immediacy, the FEA is capable of tailoring its responses based on real-time user inputs. This enables the chatbot to offer customized advice and insights that align more closely with individual interests and academic backgrounds."),
-                                    p("At the heart of the FEA's functionality is its ability to generate context-specific questions aimed at uncovering important information about users’ preferences, aspirations, and academic strengths. By employing a generative AI model integrated through an API, the chatbot can produce engaging prompts that encourage students to reflect on their career goals. This dynamic questioning process not only enhances the depth of information gathered but also fosters an interactive environment where students feel comfortable exploring their options. The ability of the FEA to adaptively shift its dialogue based on input allows for a more personalized experience that feels less like a scripted interaction and more like a meaningful conversation with a knowledgeable mentor."),
-                                    p("In addition to its interactive questioning capabilities, the FEA features a 'Quick Glimpse' mechanism that summarizes potential career paths based on the information provided by users. This visual representation helps students see the myriad of possibilities that align with their skills and interests, empowering them to make informed decisions about their educational journeys. This feature can serve as a source of inspiration and guidance, helping students visualize how their academic pursuits can directly translate into fulfilling careers in engineering. By simplifying the exploration process, the FEA enhances engagement and nurtures a proactive approach to career planning."),
-                                    p("The FEA goes beyond merely suggesting career paths; it also incorporates a salary prediction functionality that adds a crucial layer of practicality to its career guidance. After students have explored different job titles, they can select their favorites from a dropdown menu, along with their indicated experience level to receive relevant salary insights based on current market data. This feature offers valuable financial expectations that can influence students' decision-making processes, enabling them to weigh the viability of different career trajectories in a practical manner. By integrating salary predictions with career path suggestions, the chatbot provides a comprehensive and realistic overview of potential outcomes for engineering students."),
-                                    p("Lastly, user feedback and evaluation are pivotal aspects of the FEA's development and implementation. Through a structured methodology incorporating pre- and post-surveys, the impact of the chatbot on students’ confidence and knowledge regarding their career choices is quantitatively assessed. This iterative feedback loop not only helps in gauging the effectiveness of the chatbot but also identifies areas for future enhancement. The emphasis on user-centered design ensures that the FEA evolves in accordance with users' needs, ensuring it remains a relevant and valuable resource for engineering students navigating their career journeys. The Future Engineer Assistant thus stands as a promising solution for bridging the gap between education and employment in the ever-evolving engineering landscape."),
+                                    p("The Future Engineer Assistant (FEA) is an innovative AI-powered chatbot designed to provide personalized career guidance for engineering students."),
+                                    p("By leveraging natural language processing (NLP) and generative AI technologies, the FEA engages users in interactive conversations that facilitate career path exploration."),
                                     actionButton("nextToGeminiChatbot", "Next to Gemini Chatbot", class = "btn-primary")
                            )
                          )
                 ),
-
 
                 tabPanel("Ask Question Gemini Chatbot",
                          sidebarLayout(
@@ -313,8 +293,8 @@ ui <- fluidPage(
                            ),
                            mainPanel(
                              tags$div(class = "pink-box",
-                                      tags$p("You can ask the chatbot any questions regarding career-related topics."),
-                                      tags$p("Type your question or use the 'Ask by Audio' feature for a more hands-free interaction."),
+                                      tags$p("Ask the chatbot any questions regarding career-related topics."),
+                                      tags$p("Type your question or use the audio feature for a more hands-free interaction."),
                                       uiOutput("userInputUI"),
                                       tags$hr(),
                                       tags$h4("Responses"),
@@ -335,9 +315,8 @@ ui <- fluidPage(
                            sidebarPanel(
                              tags$h4("Instructions"),
                              tags$p("1. Select from a variety of engineering career paths and experience levels."),
-                             tags$p("2. After providing this information, the bot will recommend salary insights based on the latest industry standards."),
-                             tags$p("3. You can also ask the bot questions regarding salaries or career inquiries."),
-                             tags$p("4. Make sure to take note of the salary insights provided as they can inform your negotiations in future job offers."),
+                             tags$p("2. Provide this information to receive salary insights based on the latest industry standards."),
+                             tags$p("3. Note the provided salary insights for future job negotiations."),
                              tags$hr(),
                              selectInput("job_title", "Select Job Title *",
                                          choices = NULL),  
@@ -375,8 +354,8 @@ ui <- fluidPage(
                          fluidPage(
                            tags$div(class = "completion-box",
                                     h2("Session Completed"),
-                                    p("Your session has been completed!"),
-                                    p("Thank you for completing your session with FSA. As a final step, we would like to ask for your feedback through a brief survey."),
+                                    p("The session has been completed!"),
+                                    p("Thank you for completing your session with FSA. As a final step, feedback is appreciated through a brief survey."),
                                     a(href = "https://ousurvey.qualtrics.com/jfe/form/SV_3n3jlqsnkoMkn0W", target = "_blank", "Click here to take the survey:", style = "font-weight: bold; color: #841617; text-decoration: underline;")
                            )
                          )
@@ -444,7 +423,7 @@ server <- function(input, output, session) {
           shinyjs::enable("nextBtnReg")
           showModal(modalDialog(
             title = "Registration Successful",
-            "You have registered successfully! Please log in.",
+            "Registration successful! Please log in.",
             easyClose = TRUE,
             footer = NULL
           ))
@@ -459,7 +438,7 @@ server <- function(input, output, session) {
       } else {
         showModal(modalDialog(
           title = "Terms and Conditions",
-          "You must agree to the Terms and Conditions to proceed.",
+          "Agreement to the Terms and Conditions is required to proceed.",
           easyClose = TRUE,
           footer = NULL
         ))
@@ -483,15 +462,9 @@ server <- function(input, output, session) {
     }
   })
  
-  observeEvent(input$continueToInstructions, {
+  observeEvent(input$continueToQuestionnaire, {
     tabs_access(c(TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE))  
-    updateTabsetPanel(session, "tabs", selected = "Instructions")
-  })
- 
-  observeEvent(input$continueToChatbot, {
-    tabs_access(c(TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE))  
-    updateTabsetPanel(session, "tabs", selected = "Career Path Prediction")
-    resetChat()
+    updateTabsetPanel(session, "tabs", selected = "Questionnaire")
   })
  
   observeEvent(input$loginBtn, {
@@ -500,7 +473,7 @@ server <- function(input, output, session) {
     if (nrow(user) > 0) {
       showModal(modalDialog(
         title = "Loading",
-        "Please wait while we process your request.",
+        "Please wait while processing the request.",
         easyClose = TRUE,
         footer = NULL
       ))
@@ -513,7 +486,7 @@ server <- function(input, output, session) {
       } else {
         showModal(modalDialog(
           title = "Login Error",
-          "Invalid credentials. Please try again.",
+          "Invalid credentials, please try again.",
           easyClose = TRUE,
           footer = NULL
         ))
@@ -521,7 +494,7 @@ server <- function(input, output, session) {
     } else {
       showModal(modalDialog(
         title = "Login Error",
-        "No registered users found. Please create an account.",
+        "No registered users found. Create an account to proceed.",
         easyClose = TRUE,
         footer = NULL
       ))
@@ -573,7 +546,7 @@ server <- function(input, output, session) {
       answer_text <- input$chatbotAnswerInput
       if (!isCareerRelated(answer_text, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")) {
         return(tags$div(class = "rect-bubble",
-                        paste("You have not answered what the question asked:", last_question)))
+                        paste("The question asked was not answered:", last_question)))
       }
     }
     return(NULL)
@@ -582,6 +555,16 @@ server <- function(input, output, session) {
   observeEvent(input$submitAnswerBtn, {
     req(input$chatbotAnswerInput)
     answer_text <- input$chatbotAnswerInput
+    if (answer_text == "") {
+      showModal(modalDialog(
+        title = "Input Warning",
+        "Please answer Question #", current_question_index() - 1,
+        easyClose = TRUE,
+        footer = NULL
+      ))
+      return()
+    }
+   
     if (!isCareerRelated(answer_text, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")) {
       updateTextAreaInput(session, "chatbotAnswerInput", value = "")
       return()  # Skip further processing if the answer is unrelated
@@ -848,38 +831,38 @@ server <- function(input, output, session) {
     showModal(modalDialog(
       title = "Privacy Policy",
       tags$p("1. Introduction"),
-      tags$p("We value your privacy and are committed to protecting your personal information. This Privacy Policy outlines how we collect, use, disclose, and safeguard your data when you use our website and chatbot services."),
+      tags$p("Personal information privacy is a priority. This Privacy Policy outlines how personal data is collected, used, disclosed, and safeguarded when using our website and chatbot."),
       tags$p("2. Information We Collect"),
       tags$p("2.1 Personal Information"),
-      tags$p("We may collect personal information that you voluntarily provide to us, such as your name, email address, and any other details you share when interacting with our chatbot."),
+      tags$p("Personal information may be collected voluntarily through interactions with the chatbot."),
       tags$p("2.2 Usage Data"),
-      tags$p("We automatically collect certain information about your use of our website and chatbot, including IP address, browser type, operating system, access times, and the pages you have viewed."),
+      tags$p("Certain information about website and chatbot usage is automatically collected."),
       tags$p("2.3 Cookies"),
-      tags$p("We use cookies and similar tracking technologies to enhance your experience on our website. Cookies are small data files stored on your device. You can manage your cookie preferences through your browser settings."),
+      tags$p("Cookies and similar technologies enhance the user experience. Cookie preferences can be managed through browser settings."),
       tags$p("3. How We Use Your Information"),
       tags$p("3.1 To Provide Services"),
-      tags$p("We use your personal information to provide, operate, and maintain our website and chatbot services."),
+      tags$p("Personal information is used to operate and maintain website and chatbot services."),
       tags$p("3.2 To Improve Services"),
-      tags$p("We use the information to understand how our services are used, to improve our website and chatbot, and to develop new features."),
+      tags$p("Information usage allows understanding and improvement of chatbot features."),
       tags$p("3.3 To Communicate"),
-      tags$p("We may use your contact information to send you updates, promotional materials, or other communications related to our services."),
+      tags$p("Contact information may be used to send updates and promotional materials."),
       tags$p("3.4 For Security"),
-      tags$p("We use the information to detect, prevent, and address technical issues, fraud, and unauthorized access to our services."),
+      tags$p("Information is utilized to detect and prevent unauthorized access."),
       tags$p("4. Information Sharing and Disclosure"),
-      tags$p("Your information will not be shared with anyone except the research team. De-identified data (we will never share any of your identifying information) will be used in the publications that result from the research papers related to this project."),
+      tags$p("Information will not be shared except with the research team. De-identified data may be published in research papers."),
       tags$p("5. Data Security"),
-      tags$p("We implement appropriate technical and organizational measures to protect your personal information against accidental or unlawful destruction, loss, alteration, unauthorized disclosure, or access."),
+      tags$p("Technical and organizational measures are implemented to protect personal information."),
       tags$p("6. Your Data Rights"),
       tags$p("6.1 Access and Correction"),
-      tags$p("You have the right to access and correct your personal information held by us. You may request access to or correction of your data by contacting us."),
+      tags$p("Request access to or correction of personal information by contacting us."),
       tags$p("6.2 Deletion"),
-      tags$p("You have the right to request the deletion of your personal information, subject to certain legal obligations we may have to retain the data."),
+      tags$p("Request deletion of personal information, subject to legal obligations."),
       tags$p("6.3 Data Portability"),
-      tags$p("You have the right to request a copy of your personal data in a structured, commonly used, and machine-readable format."),
+      tags$p("Request a copy of personal data in a structured format."),
       tags$p("7. Third-Party Links"),
-      tags$p("Our website and chatbot may contain links to third-party websites. We are not responsible for the privacy practices or content of these external sites."),
+      tags$p("Links to third-party websites are not the responsibility of the site."),
       tags$p("8. Changes to This Privacy Policy"),
-      tags$p("We may update this Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy on this page. You are advised to review this Privacy Policy periodically for any changes."),
+      tags$p("Policy updates will be posted on this page."),
       footer = modalButton("Close")
     ))
   })
@@ -889,46 +872,40 @@ server <- function(input, output, session) {
     showModal(modalDialog(
       title = "Terms and Conditions",
       tags$p("1. Acceptance of Terms"),
-      tags$p("By accessing and using this website and its chatbot services, you agree to comply with and be bound by the following terms and conditions. If you disagree with any part of these terms, please discontinue using this website and its chatbot services."),
+      tags$p("By accessing and using this website and chatbot services, compliance with terms is required."),
       tags$p("2. Use of Services"),
       tags$p("2.1 Eligibility"),
-      tags$p("Users must be at least 18 years old or have parental/guardian consent to access our services."),
+      tags$p("Age requirement is 18 or parental/guardian consent."),
       tags$p("2.2 Purpose"),
-      tags$p("The Future Engineer Assistant chatbot serves as a career guidance tool, providing information about job opportunities, career pathways, and related advice to assist users in making informed career decisions."),
+      tags$p("This chatbot serves as a career guidance tool."),
       tags$p("2.3 Personal Use"),
-      tags$p("These services are designed solely for personal, non-commercial use. Users agree to avoid using the services for any unlawful or unauthorized activities."),
+      tags$p("Use of services is for personal purposes only."),
       tags$p("3. User Conduct"),
       tags$p("3.1 Prohibited Activities"),
-      tags$p("Users agree to refrain from activities that:"),
-      tags$p("Contravene any applicable laws or regulations."),
-      tags$p("Infringe on the rights of others."),
-      tags$p("Interfere with the website or chatbot services' functionality."),
+      tags$p("Users must refrain from unlawful activities."),
       tags$p("3.2 Content Submission"),
-      tags$p("Any content submitted, such as questions and feedback, must be lawful and free from harmful elements, including viruses."),
+      tags$p("Submitted content must be lawful."),
       tags$p("4. Privacy and Data Protection"),
       tags$p("4.1 Data Collection"),
-      tags$p("We handle personal data in accordance with our Privacy Policy. By using the website and chatbot, users consent to this data processing."),
+      tags$p("Personal data is handled per the Privacy Policy."),
       tags$p("4.2 Confidentiality"),
-      tags$p("We prioritize the confidentiality of user information but cannot guarantee absolute data security over the internet."),
+      tags$p("Confidentiality of user information is prioritized."),
       tags$p("5. Intellectual Property"),
       tags$p("5.1 Ownership"),
-      tags$p("All website content, including design, text, graphics, and other materials, is owned by or licensed to us. Unauthorized use is prohibited."),
+      tags$p("All website content is owned or licensed to us."),
       tags$p("6. Disclaimer of Warranties"),
       tags$p("6.1 As-Is Basis"),
-      tags$p("The website and chatbot services are provided 'as-is' and 'as-available' without any warranties, either express or implied."),
+      tags$p("Services are provided 'as-is' without warranties."),
       tags$p("6.2 Information Accuracy"),
-      tags$p("While the Future Engineer Assistant strives to deliver accurate career information, users are encouraged to validate key details through additional sources for a fully informed decision-making process."),
+      tags$p("Verification from additional sources is encouraged."),
       tags$p("7. Limitation of Liability"),
-      tags$p("7.1 Limitation"),
-      tags$p("To the maximum extent allowed by law, we are not liable for any direct, indirect, incidental, or consequential damages arising from website or chatbot use."),
-      tags$p("7.2 Indemnification"),
-      tags$p("Users agree to indemnify us against any claims, damages, or expenses arising from their use of the services or any violation of these terms."),
+      tags$p("Limitation on liability is to the maximum extent allowed by law."),
       tags$p("8. Modifications to Terms"),
-      tags$p("We reserve the right to change these terms at any time. Changes are effective immediately upon posting on the website, and continued use of services indicates acceptance of the modified terms."),
+      tags$p("Terms may change at any time."),
       tags$p("9. Termination"),
-      tags$p("We may terminate or suspend access to the website and chatbot services at our discretion without prior notice for actions believed to violate these terms or harm other users."),
+      tags$p("Access to the website may be terminated without notice."),
       tags$p("10. Information Accuracy Disclaimer"),
-      tags$p("The Future Engineer Assistant provides useful career and job information but may not always reflect the latest industry updates. Users are advised to verify critical details independently and consult with additional resources for career decisions."),
+      tags$p("The chatbot provides useful information but may not reflect the latest industry updates."),
       footer = modalButton("Close")
     ))
   })
