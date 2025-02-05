@@ -138,7 +138,7 @@ ui <- fluidPage(
   tags$div(class = "bubble-title", "Future Engineer Assistant - ShinyGeminiPro App"),
   tags$div(img(src = "cute_robot_logo.png", height = "100px", align = "center")),
 
-  # Login Section
+   # Login Section
   conditionalPanel(
     condition = "!output.registered && !output.loggedIn",
     fluidPage(
@@ -228,6 +228,7 @@ ui <- fluidPage(
                          fluidPage(
                            titlePanel(tags$div(class = "header-box", "Introduction")),
                            tags$div(class = "welcome-box",
+                                    img(src = "welcome_image.png", height = "200px", align = "center"), # Example image to be placed above paragraphs
                                     h3("Introduction"),
                                     p("As the field of engineering continues to grow, undergraduate and graduate students face numerous career choices, making it challenging to decide on the best path. This project’s aim is to establish an interactive chatbot tailored specifically for engineering undergraduates/graduates."),
                                     p("By leveraging natural language processing and generative AI technologies, the bot engages students in personalized conversations, aligning current skill sets with suitable careers, and providing customized guidance for navigating professional choices."),
@@ -252,8 +253,8 @@ ui <- fluidPage(
                            sidebarPanel(
                              tags$h4("Instructions"),
                              tags$p("1. Answer the generated questions to receive personalized career recommendations."),
-                             tags$p("2. Once all questions are answered, a list of recommended career paths will be provided."),
-                             tags$p("3. Feel free to click submit without leaving questions blank, but be mindful that a warning will appear."),
+                             tags$p("2. Each answer should be between 3 to 120 words."),
+                             tags$p("3. Once all questions are answered, a list of recommended career paths will be provided."),
                              tags$hr(),
                              uiOutput("questionsProgress")
                            ),
@@ -268,7 +269,8 @@ ui <- fluidPage(
                                       actionButton("submitAnswerBtn", "Submit Answer", class = "btn-primary"),
                                       tags$hr(),
                                       uiOutput("predictedCareerPaths"),
-                                      uiOutput("errorMessage")  # For displaying error messages
+                                      uiOutput("errorMessage"),  # For displaying error messages
+                                      tags$div(id = "wordCountWarning", class = "text-danger") # Added for warning to display under textbox
                              )
                            )
                          )
@@ -289,9 +291,10 @@ ui <- fluidPage(
                 tabPanel("Welcome to Chatbot",
                          fluidPage(
                            tags$div(class = "welcome-box",
+                                    img(src = "https://png.pngtree.com/png-clipart/20230401/original/pngtree-smart-chatbot-cartoon-clipart-png-image_9015126.png", height = "200px", align = "center"),
                                     h3("Welcome to Gemini Chatbot"),
-                                    p("The Future Engineer Assistant (FEA) is an innovative AI-powered chatbot designed to provide personalized career guidance for engineering students. By facilitating engaging and interactive conversations, it helps students navigate their career options and align their strengths with potential career paths."),
-                                    tags$div(img(src = "https://png.pngtree.com/png-clipart/20230401/original/pngtree-smart-chatbot-cartoon-clipart-png-image_9015126.png", height = "200px", align = "center")),
+                                    p("The Future Engineer Assistant (FEA) is an innovative AI-powered chatbot designed specifically to provide personalized career guidance for engineering students. By leveraging advanced natural language processing (NLP) and generative AI technologies, the FEA engages users in dynamic, interactive conversations that facilitate the exploration of potential career paths. Unlike traditional career counseling methods, which can be limited in personalization and immediacy, the FEA is capable of tailoring its responses based on real-time user inputs. This enables the chatbot to offer customized advice and insights that align more closely with individual interests and academic backgrounds."),
+                                    p("At the heart of the FEA's functionality is its ability to generate context-specific questions aimed at uncovering important information about users’ preferences, aspirations, and academic strengths. By employing a generative AI model integrated through an API, the chatbot can produce engaging prompts that encourage students to reflect on their career goals. This dynamic questioning process not only enhances the depth of information gathered but also fosters an interactive environment where students feel comfortable exploring their options. The ability of the FEA to adaptively shift its dialogue based on input allows for a more personalized experience that feels less like a scripted interaction and more like a meaningful conversation with a knowledgeable mentor."),
                                     actionButton("nextToGeminiChatbot", "Next to Gemini Chatbot", class = "btn-primary")
                            )
                          )
@@ -571,6 +574,18 @@ server <- function(input, output, session) {
   observeEvent(input$submitAnswerBtn, {
     req(input$chatbotAnswerInput)
     answer_text <- input$chatbotAnswerInput
+
+    # Check word count
+    word_count <- str_count(answer_text, "\\S+")
+    if (word_count < 3 || word_count > 120) {
+      output$wordCountWarning <- renderUI({
+        tags$p("Please ensure your answer is between 3 to 120 words.", style = "color: red;")
+      })
+      return()
+    } else {
+      output$wordCountWarning <- renderUI({ NULL })  # Clear warning if answer is valid
+    }
+   
     if (answer_text == "") {
       showModal(modalDialog(
         title = "Input Warning",
@@ -623,9 +638,16 @@ server <- function(input, output, session) {
 
   output$predictedCareerPathsTable <- renderDT({
     req(predicted_career_paths())
+    
+    # Get job descriptions for predicted career paths
+    job_descriptions <- sapply(predicted_career_paths(), function(path) {
+      # Mock function to obtain job descriptions, replace with actual job description fetching
+      return(paste("Job description for", path))
+    })
 
     # Create a clean data frame for display
-    df <- data.frame(Career_Path = paste0("**", predicted_career_paths(), "**"), stringsAsFactors = FALSE)
+    df <- data.frame(Career_Path = paste0("**", predicted_career_paths(), "**"), 
+                     Job_Description = job_descriptions, stringsAsFactors = FALSE)
     datatable(df, options = list(pageLength = 5, autoWidth = TRUE, 
                                   columnDefs = list(list(className = 'dt-left', targets = 0))), 
               rownames = FALSE)
@@ -949,4 +971,6 @@ server <- function(input, output, session) {
   })
 }
 
-shinyApp(ui = ui, server = server
+shinyApp(ui = ui, server = server)
+
+
