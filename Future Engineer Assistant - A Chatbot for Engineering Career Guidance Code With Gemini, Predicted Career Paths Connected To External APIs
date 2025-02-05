@@ -139,7 +139,7 @@ ui <- fluidPage(
   tags$div(img(src = "cute_robot_logo.png", height = "100px", align = "center")),
 
   
-  # Login Section
+   # Login Section
   conditionalPanel(
     condition = "!output.registered && !output.loggedIn",
     fluidPage(
@@ -229,7 +229,7 @@ ui <- fluidPage(
                          fluidPage(
                            titlePanel(tags$div(class = "header-box", "Introduction")),
                            tags$div(class = "welcome-box",
-                                    img(src = "welcome_image.png", height = "200px", align = "center"), 
+                                    img(src = "welcome_image.png", height = "200px", align = "center"), # Example image to be placed above paragraphs
                                     h3("Introduction"),
                                     p("As the field of engineering continues to grow, undergraduate and graduate students face numerous career choices, making it challenging to decide on the best path. This project’s aim is to establish an interactive chatbot tailored specifically for engineering undergraduates/graduates."),
                                     p("By leveraging natural language processing and generative AI technologies, the bot engages students in personalized conversations, aligning current skill sets with suitable careers, and providing customized guidance for navigating professional choices."),
@@ -260,7 +260,7 @@ ui <- fluidPage(
                              uiOutput("questionsProgress")
                            ),
                            mainPanel(
-                             tags$div(class = "pink-box chatbox-area",  # Expanded area for the chatbot
+                             tags$div(class = "pink-box",
                                       tags$h4("Chatbot Questions"),
                                       div(class = "chat-history",
                                           uiOutput("currentQuestion")  # Display current question only
@@ -282,7 +282,7 @@ ui <- fluidPage(
                            tags$div(class = "completion-box",
                                     h2("Quick Glimpse"),
                                     p("Based on the options selected, a personalized summary of preferences and interests has been created. It appears that the choices align with the following themes:"),
-                                    tableOutput("predictedCareerPathsTable"),
+                                    DTOutput("predictedCareerPathsTable"),
                                     downloadButton("downloadCareerPaths", "Download Predicted Career Paths CSV", class = "btn-primary"),
                                     actionButton("nextToWelcomeChatbot", "Next to Welcome Chatbot", class = "btn-primary")
                            )
@@ -315,7 +315,7 @@ ui <- fluidPage(
                              textAreaInput("userInput", "Ask your question here:", placeholder = "Type your question here...", rows = 4)
                            ),
                            mainPanel(
-                             tags$div(class = "pink-box chatbox-area",  # Expanded area for the chatbot
+                             tags$div(class = "pink-box chat-responses",
                                       tags$p("Ask the chatbot any questions regarding career-related topics."),
                                       tags$p("Type your question or use the audio feature for a more hands-free interaction."),
                                       div(class = "chat-history",
@@ -403,7 +403,7 @@ server <- function(input, output, session) {
   current_question_index <- reactiveVal(1)
   randomized_questions <- reactiveVal()  
   chatbot_responses <- reactiveVal(data.frame(Question = character(), Response = character(), stringsAsFactors = FALSE))
-
+ 
   user_details <- loadUserData()
   recommended_careers <- reactiveVal(NULL)
   predicted_career_paths <- reactiveVal(NULL)
@@ -423,7 +423,7 @@ server <- function(input, output, session) {
                      "Gender Identity", "Terms and Conditions")
 
     empty_fields <- field_names[sapply(required_fields, function(x) is.na(x) || x == "")]
-  
+   
     if (length(empty_fields) > 0) {
       showModal(modalDialog(
         title = "Registration Warning",
@@ -537,7 +537,7 @@ server <- function(input, output, session) {
     chatbot_responses(data.frame(Question = character(), Response = character(), stringsAsFactors = FALSE))
     recommended_careers(NULL)
     predicted_career_paths(NULL)  
-    questions <- generateCareerQuestions(api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ") # Replace with your actual API key
+    questions <- generateCareerQuestions(api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")
     randomized_questions(questions)
     askCareerQuestions()
   }
@@ -551,9 +551,6 @@ server <- function(input, output, session) {
           question
         )
       })
-      # Speak the question using speech synthesis
-      session$sendCustomMessage("speakQuestion", question)
-      
       current_question_index(current_question_index() + 1)
     } else {
       chat_history(rbind(chat_history(), data.frame(Role = "Bot", Message = "All questions answered! Please click the next button to see your predicted career paths.", stringsAsFactors = FALSE)))
@@ -567,7 +564,7 @@ server <- function(input, output, session) {
         chat_history()$Role[nrow(chat_history())] == "User") {
       last_question <- tail(chat_history()$Message, 1)
       answer_text <- input$chatbotAnswerInput
-      if (!isCareerRelated(answer_text, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")) {  # Replace with your actual API key
+      if (!isCareerRelated(answer_text, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")) {
         return(tags$div(class = "rect-bubble",
                         paste("The question asked was not answered:", last_question)))
       }
@@ -582,14 +579,15 @@ server <- function(input, output, session) {
     # Check word count
     word_count <- str_count(answer_text, "\\S+")
     if (word_count < 3 || word_count > 120) {
-      output$wordCountWarning <- renderUI({
-        tags$p("Please ensure your answer is between 3 to 120 words.", style = "color: red;")
-      })
+      showModal(modalDialog(
+        title = "Word Count Warning",
+        "Please ensure your answer is between 3 to 120 words.",
+        easyClose = TRUE,
+        footer = NULL
+      ))
       return()
-    } else {
-      output$wordCountWarning <- renderUI({ NULL })  # Clear warning if answer is valid
     }
-   
+
     if (answer_text == "") {
       showModal(modalDialog(
         title = "Input Warning",
@@ -599,18 +597,19 @@ server <- function(input, output, session) {
       ))
       return()
     }
-   
-    if (!isCareerRelated(answer_text, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")) {  # Replace with your actual API key
-      updateTextAreaInput(session, "chatbotAnswerInput", value = "")
+
+    if (!isCareerRelated(answer_text, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")) {
+      showModal(modalDialog(
+        title = "Off-Topic Warning",
+        "Please stay on topic. Kindly provide a relevant answer to the question.",
+        easyClose = TRUE,
+        footer = NULL
+      ))
       return()  # Skip further processing if the answer is unrelated
     }
-   
+
     # Update chat history for user input
     chat_history(rbind(chat_history(), data.frame(Role = "User", Message = answer_text, stringsAsFactors = FALSE)))
-    
-    # Speak the user's answer (optional, you can leave or remove this line)
-    session$sendCustomMessage("speakAnswer", answer_text)
-
     askCareerQuestions()
     updateTextAreaInput(session, "chatbotAnswerInput", value = "")
   })
@@ -636,7 +635,7 @@ server <- function(input, output, session) {
 
   observeEvent(input$nextToGlimpse, {
     user_answers <- unlist(chat_history()[chat_history()$Role == "User", "Message"])
-    predicted_career_paths(predictCareerPaths(user_answers, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ"))  # Replace with your actual API key  
+    predicted_career_paths(predictCareerPaths(user_answers, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ"))  
    
     user_career_paths(rbind(user_career_paths(), data.frame(Date = Sys.Date(), Career_Path = paste(predicted_career_paths(), collapse = ", "), stringsAsFactors = FALSE)))
 
@@ -644,28 +643,21 @@ server <- function(input, output, session) {
     updateTabsetPanel(session, "tabs", selected = "Quick Glimpse")
   })
 
-  output$predictedCareerPathsTable <- renderUI({
+  output$predictedCareerPathsTable <- renderDT({
     req(predicted_career_paths())
     
+    # Get job descriptions for predicted career paths
     job_descriptions <- sapply(predicted_career_paths(), function(path) {
-        return(paste("Job description for", path))  # Mock function to obtain job descriptions
+      # Mock function to obtain job descriptions, replace with actual job description fetching
+      return(paste("Job description for", path))
     })
 
-    # Create a data frame for display
-    df <- data.frame(Career_Path = predicted_career_paths(), Job_Description = job_descriptions, stringsAsFactors = FALSE)
-
-    tags$table(class = "predicted-table",
-               tags$tr(
-                 tags$th("Career Path"),
-                 tags$th("Job Description")
-               ),
-               do.call(tags$tbody, lapply(1:nrow(df), function(i) {
-                 tags$tr(
-                   tags$td(df$Career_Path[i]),
-                   tags$td(df$Job_Description[i])
-                 )
-               }))
-    )
+    # Create a clean data frame for display
+    df <- data.frame(Career_Path = paste0("**", predicted_career_paths(), "**"), 
+                     Job_Description = job_descriptions, stringsAsFactors = FALSE)
+    datatable(df, options = list(pageLength = 5, autoWidth = TRUE, 
+                                  columnDefs = list(list(className = 'dt-left', targets = 0))), 
+              rownames = FALSE)
   })
 
   output$downloadCareerPaths <- downloadHandler(
@@ -690,7 +682,7 @@ server <- function(input, output, session) {
     experience_level <- input$experience
    
     if (!is.null(job_title_input) && !is.null(experience_level)) {
-      response <- predictSalary(job_title_input, experience_level, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")  # Replace with your actual API key  
+      response <- predictSalary(job_title_input, experience_level, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")  
       salary_responses(rbind(salary_responses(), data.frame(Job_Title = job_title_input, Experience_Level = experience_level, Response = response, stringsAsFactors = FALSE)))
     }
   })
@@ -727,7 +719,7 @@ server <- function(input, output, session) {
     user_text <- input$userInput
     predicted_paths <- predicted_career_paths()
     
-    response_data <- connectCareerToChatbot(user_text, predicted_paths, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")  # Replace with your actual API key  
+    response_data <- connectCareerToChatbot(user_text, predicted_paths, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")  
     
     chat_history(rbind(chat_history(), data.frame(Role = "User", Message = user_text, stringsAsFactors = FALSE)))
 
@@ -739,9 +731,6 @@ server <- function(input, output, session) {
     chatbot_responses(rbind(chatbot_responses(), data.frame(Question = user_text, Response = response_data$response, stringsAsFactors = FALSE)))
 
     user_chat_history(rbind(user_chat_history(), data.frame(Date = Sys.Date(), Chat = user_text, stringsAsFactors = FALSE)))
-
-    # Speak the bot's response
-    session$sendCustomMessage("speakResponse", response_data$response)
 
     updateTextAreaInput(session, "userInput", value = "")
   });
@@ -802,7 +791,7 @@ server <- function(input, output, session) {
 
             recognition.onresult = function(event) {
               final_transcript = event.results[0][0].transcript;
-              Shiny.setInputValue('userInput', final_transcript);
+              Shiny.setInputValue('voice_input', final_transcript);
               respondToUser(final_transcript);
             };
 
