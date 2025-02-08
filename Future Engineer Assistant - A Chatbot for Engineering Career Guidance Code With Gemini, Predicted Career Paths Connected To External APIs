@@ -139,7 +139,7 @@ ui <- fluidPage(
   tags$div(img(src = "cute_robot_logo.png", height = "100px", align = "center")),
 
   
-   # Login Section
+    # Login Section
   conditionalPanel(
     condition = "!output.registered && !output.loggedIn",
     fluidPage(
@@ -284,6 +284,18 @@ ui <- fluidPage(
                                     p("Based on the options selected, a personalized summary of preferences and interests has been created. It appears that the choices align with the following themes:"),
                                     DTOutput("predictedCareerPathsTable"),
                                     downloadButton("downloadCareerPaths", "Download Predicted Career Paths CSV", class = "btn-primary"),
+                                    actionButton("nextToPostSurvey", "Next to Post Survey", class = "btn-primary")
+                           )
+                         )
+                ),
+
+                tabPanel("Post Survey",
+                         fluidPage(
+                           tags$div(class = "completion-box",
+                                    h2("Please Complete Post Survey"),
+                                    p("We are conducting this survey to collect pilot and final study data from all participants. Your responses are essential for evaluating the effectiveness of the Future Engineer Assistant and improving future iterations of the research study. The data collected will help us understand how well the chatbot serves the needs of engineering students and will inform necessary adjustments to better support future users. Thank you for your participation, and we highly appreciate your feedback."),
+                                    tags$a(href = "https://ousurvey.qualtrics.com/jfe/form/SV_3n3jlqsnkoMkn0W", target = "_blank", 
+                                            class = "important-link", "Click here to complete the Post Survey"),
                                     actionButton("nextToWelcomeChatbot", "Next to Welcome Chatbot", class = "btn-primary")
                            )
                          )
@@ -639,7 +651,7 @@ server <- function(input, output, session) {
    
     user_career_paths(rbind(user_career_paths(), data.frame(Date = Sys.Date(), Career_Path = paste(predicted_career_paths(), collapse = ", "), stringsAsFactors = FALSE)))
 
-    tabs_access(c(TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE))  
+    tabs_access(c(TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE))  
     updateTabsetPanel(session, "tabs", selected = "Quick Glimpse")
   })
 
@@ -979,3 +991,4 @@ server <- function(input, output, session) {
 }
 
 shinyApp(ui = ui, server = server)
+
