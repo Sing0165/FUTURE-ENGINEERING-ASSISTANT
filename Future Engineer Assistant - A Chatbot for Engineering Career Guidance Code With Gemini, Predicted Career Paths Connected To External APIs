@@ -37,7 +37,7 @@ predictCareerPaths <- function(answers, api_key) {
   if (length(answers) == 0) {
     return(NULL)
   }
- 
+
   prompt <- paste("Based on the following user responses, please suggest 5 very specific career paths for an engineering student:", paste(answers, collapse = " "))
   response <- generateContent(prompt, api_key)
   return(unlist(strsplit(response, ",")))
@@ -77,7 +77,7 @@ connectCareerToChatbot <- function(input_question, predicted_paths, api_key) {
 isCareerRelated <- function(input_text, api_key) {
   prompt <- paste("Analyze the following user input and determine whether it relates to career pathways or job-related topics:", input_text)
   analysis_response <- generateContent(prompt, api_key)
- 
+
   if (grepl("career|job|profession|engineering|major|skills|employment|opportunities", analysis_response, ignore.case = TRUE)) {
     return(TRUE)
   } else {
@@ -117,16 +117,19 @@ ui <- fluidPage(
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
+      height: 400px; /* Expanded height */
     }
     
     .chat-input {
-      width: 45%;
+      flex: 1;
       margin-right: 20px; 
+      height: 100%; /* Full height */
     }
     
     .chat-responses {
-      width: 50%;
+      flex: 1;
       margin-left: 20px; 
+      height: 100%; /* Full height */
     }
     
     .centered-congratulation { text-align: center; font-size: 28px; }
@@ -228,7 +231,7 @@ ui <- fluidPage(
                            titlePanel(tags$div(class = "header-box", "Introduction")),
                            tags$div(class = "welcome-box",
                                     img(src = "welcome_image.png", height = "200px", align = "center"), 
-                               
+                                    h3("Introduction"),
                                     p("As the field of engineering continues to grow, undergraduate and graduate students face numerous career choices, making it challenging to decide on the best path. This project’s aim is to establish an interactive chatbot tailored specifically for engineering undergraduates/graduates."),
                                     p("Welcome to the Future Engineer Assistant (FEA) app, a dynamic and interactive platform designed specifically for engineering students navigating the complexities of career selection. In a rapidly evolving field where opportunities abound, finding the right career path can be both exciting and daunting. The FEA harnesses the power of generative AI and natural language processing to engage users in personalized conversations, helping them explore potential career trajectories while aligning their unique skills and interests with industry demands. As you journey through the application, you'll encounter tailored questionnaires, insightful recommendations, and interactive visualizations that empower you to make informed decisions about your future.
 
@@ -330,7 +333,7 @@ We truly appreciate your time and effort in contributing to this research. Your 
                                           width = '100%'),
                              uiOutput("voiceControls"),
                              tags$hr(),
-                             textAreaInput("userInput", "Ask your question here:", placeholder = "Type your question here...", rows = 4)
+                             textAreaInput("userInput", "Ask your question here:", placeholder = "Type your question here...", rows = 7)
                            ),
                            mainPanel(
                              tags$div(class = "pink-box chat-responses",
@@ -665,9 +668,11 @@ server <- function(input, output, session) {
     req(predicted_career_paths())
     
     df <- data.frame(Career_Path = paste0("**", predicted_career_paths(), "**"), stringsAsFactors = FALSE)
-    datatable(df, options = list(pageLength = 5, autoWidth = TRUE,
+    datatable(df, options = list(pageLength = 5, autoWidth = TRUE, 
+                                  dom = 't', 
                                   columnDefs = list(list(className = 'dt-left', targets = 0))), 
-              rownames = FALSE)
+              rownames = FALSE, 
+              escape = FALSE)  # Escape to allow HTML
   })
 
   output$downloadCareerPaths <- downloadHandler(
