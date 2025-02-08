@@ -667,7 +667,7 @@ server <- function(input, output, session) {
   output$predictedCareerPathsTable <- renderDT({
     req(predicted_career_paths())
     
-    df <- data.frame(Career_Path = paste0("**", predicted_career_paths(), "**"), stringsAsFactors = FALSE)
+    df <- data.frame(Career_Path = predicted_career_paths(), stringsAsFactors = FALSE)
     datatable(df, options = list(pageLength = 5, autoWidth = TRUE, 
                                   dom = 't', 
                                   columnDefs = list(list(className = 'dt-left', targets = 0))), 
@@ -999,5 +999,3 @@ server <- function(input, output, session) {
 }
 
 shinyApp(ui = ui, server = server)
-
-
