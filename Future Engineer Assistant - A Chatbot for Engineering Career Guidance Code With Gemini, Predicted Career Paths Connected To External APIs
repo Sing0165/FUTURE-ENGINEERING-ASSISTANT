@@ -113,7 +113,6 @@ ui <- fluidPage(
     .completion-box { border: 2px solid #841617; border-radius: 15px; padding: 20px; background-color: rgba(255, 255, 255, 0.9); text-align: center; margin-top: 20px; }
     .important-link { font-size: 18px; font-weight: bold; color: #007bff; text-align: center; margin-top: 10px; }
     
-    /* New CSS for layout adjustments */
     .chat-container {
       display: flex;
       justify-content: space-between;
@@ -122,12 +121,12 @@ ui <- fluidPage(
     
     .chat-input {
       width: 45%;
-      margin-right: 20px; /* Spacing between input and responses */
+      margin-right: 20px; 
     }
     
     .chat-responses {
       width: 50%;
-      margin-left: 20px; /* Adjust margin to suit design */
+      margin-left: 20px; 
     }
     
     .centered-congratulation { text-align: center; font-size: 28px; }
@@ -229,7 +228,7 @@ ui <- fluidPage(
                          fluidPage(
                            titlePanel(tags$div(class = "header-box", "Introduction")),
                            tags$div(class = "welcome-box",
-                                    img(src = "welcome_image.png", height = "200px", align = "center"), # Example image to be placed above paragraphs
+                                    img(src = "welcome_image.png", height = "200px", align = "center"), 
                                     h3("Introduction"),
                                     p("As the field of engineering continues to grow, undergraduate and graduate students face numerous career choices, making it challenging to decide on the best path. This project’s aim is to establish an interactive chatbot tailored specifically for engineering undergraduates/graduates."),
                                     p("By leveraging natural language processing and generative AI technologies, the bot engages students in personalized conversations, aligning current skill sets with suitable careers, and providing customized guidance for navigating professional choices."),
@@ -263,15 +262,15 @@ ui <- fluidPage(
                              tags$div(class = "pink-box",
                                       tags$h4("Chatbot Questions"),
                                       div(class = "chat-history",
-                                          uiOutput("currentQuestion")  # Display current question only
+                                          uiOutput("currentQuestion")  
                                       ),
                                       tags$hr(),
                                       textAreaInput("chatbotAnswerInput", "Your Answer", placeholder = "Type your answer here...", rows = 4),  
                                       actionButton("submitAnswerBtn", "Submit Answer", class = "btn-primary"),
                                       tags$hr(),
                                       uiOutput("predictedCareerPaths"),
-                                      uiOutput("errorMessage"),  # For displaying error messages
-                                      tags$div(id = "wordCountWarning", class = "text-danger") # Added for warning to display under textbox
+                                      uiOutput("errorMessage"),  
+                                      tags$div(id = "wordCountWarning", class = "text-danger") 
                              )
                            )
                          )
@@ -284,7 +283,7 @@ ui <- fluidPage(
                                     p("Based on the options selected, a personalized summary of preferences and interests has been created. It appears that the choices align with the following themes:"),
                                     DTOutput("predictedCareerPathsTable"),
                                     downloadButton("downloadCareerPaths", "Download Predicted Career Paths CSV", class = "btn-primary"),
-                                    actionButton("nextToPostSurvey", "Next to Post Survey", class = "btn-primary")
+                                    actionButton("nextToPostSurvey", "Next to Post Survey", class = "btn-primary")  # Make sure the button works
                            )
                          )
                 ),
@@ -514,7 +513,7 @@ server <- function(input, output, session) {
       if (any(user$Username == input$login_username & user$Password == hashed_login_password)) {
         loggedIn(TRUE)
         resetChat()
-        tabs_access(c(TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE))  # Allow access to History
+        tabs_access(c(TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE))  
       } else {
         showModal(modalDialog(
           title = "Login Error",
@@ -617,7 +616,7 @@ server <- function(input, output, session) {
         easyClose = TRUE,
         footer = NULL
       ))
-      return()  # Skip further processing if the answer is unrelated
+      return()  
     }
 
     # Update chat history for user input
@@ -658,16 +657,8 @@ server <- function(input, output, session) {
   output$predictedCareerPathsTable <- renderDT({
     req(predicted_career_paths())
     
-    # Get job descriptions for predicted career paths
-    job_descriptions <- sapply(predicted_career_paths(), function(path) {
-      # Mock function to obtain job descriptions, replace with actual job description fetching
-      return(paste("Job description for", path))
-    })
-
-    # Create a clean data frame for display
-    df <- data.frame(Career_Path = paste0("**", predicted_career_paths(), "**"), 
-                     Job_Description = job_descriptions, stringsAsFactors = FALSE)
-    datatable(df, options = list(pageLength = 5, autoWidth = TRUE, 
+    df <- data.frame(Career_Path = paste0("**", predicted_career_paths(), "**"), stringsAsFactors = FALSE)
+    datatable(df, options = list(pageLength = 5, autoWidth = TRUE,
                                   columnDefs = list(list(className = 'dt-left', targets = 0))), 
               rownames = FALSE)
   })
@@ -860,7 +851,7 @@ server <- function(input, output, session) {
         "))
       )
     } else {
-      tags$div()  # Returns nothing for text input
+      tags$div()  
     }
   })
 
@@ -970,13 +961,13 @@ server <- function(input, output, session) {
   # New Interactive Career Path Visualization Logic
   output$careerPathSelector <- renderUI({
     req(predicted_career_paths())
-    selectInput("selected_career", "Select a Career Path", choices = predicted_career_paths(), selected = predicted_career_paths()[1]) # Set default selection to first career path
+    selectInput("selected_career", "Select a Career Path", choices = predicted_career_paths(), selected = predicted_career_paths()[1])
   })
 
   output$careerPathNetwork <- renderVisNetwork({
     req(input$selected_career)
     selected_career <- input$selected_career
-    career_steps <- getCareerPathSteps(selected_career, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")  # Replace with actual API key
+    career_steps <- getCareerPathSteps(selected_career, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")
 
     # Create nodes and edges
     nodes <- data.frame(id = 1:length(career_steps), label = career_steps, stringsAsFactors = FALSE)
