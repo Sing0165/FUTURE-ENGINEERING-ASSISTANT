@@ -228,7 +228,7 @@ ui <- fluidPage(
                            titlePanel(tags$div(class = "header-box", "Introduction")),
                            tags$div(class = "welcome-box",
                                     img(src = "welcome_image.png", height = "200px", align = "center"), 
-                                    h3("Introduction"),
+                               
                                     p("As the field of engineering continues to grow, undergraduate and graduate students face numerous career choices, making it challenging to decide on the best path. This project’s aim is to establish an interactive chatbot tailored specifically for engineering undergraduates/graduates."),
                                     p("Welcome to the Future Engineer Assistant (FEA) app, a dynamic and interactive platform designed specifically for engineering students navigating the complexities of career selection. In a rapidly evolving field where opportunities abound, finding the right career path can be both exciting and daunting. The FEA harnesses the power of generative AI and natural language processing to engage users in personalized conversations, helping them explore potential career trajectories while aligning their unique skills and interests with industry demands. As you journey through the application, you'll encounter tailored questionnaires, insightful recommendations, and interactive visualizations that empower you to make informed decisions about your future.
 
