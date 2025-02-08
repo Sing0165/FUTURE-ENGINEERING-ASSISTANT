@@ -137,8 +137,7 @@ ui <- fluidPage(
   tags$div(class = "bubble-title", "Future Engineer Assistant - ShinyGeminiPro App"),
   tags$div(img(src = "cute_robot_logo.png", height = "100px", align = "center")),
 
-  
-    # Login Section
+      # Login Section
   conditionalPanel(
     condition = "!output.registered && !output.loggedIn",
     fluidPage(
@@ -548,7 +547,7 @@ server <- function(input, output, session) {
     chatbot_responses(data.frame(Question = character(), Response = character(), stringsAsFactors = FALSE))
     recommended_careers(NULL)
     predicted_career_paths(NULL)  
-    questions <- generateCareerQuestions(api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")
+    questions <- generateCareerQuestions(api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")  # Use your actual API key
     randomized_questions(questions)
     askCareerQuestions()
   }
@@ -575,7 +574,7 @@ server <- function(input, output, session) {
         chat_history()$Role[nrow(chat_history())] == "User") {
       last_question <- tail(chat_history()$Message, 1)
       answer_text <- input$chatbotAnswerInput
-      if (!isCareerRelated(answer_text, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")) {
+      if (!isCareerRelated(answer_text, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")) {  # Use your actual API key
         return(tags$div(class = "rect-bubble",
                         paste("The question asked was not answered:", last_question)))
       }
@@ -609,7 +608,7 @@ server <- function(input, output, session) {
       return()
     }
 
-    if (!isCareerRelated(answer_text, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")) {
+    if (!isCareerRelated(answer_text, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")) {  # Use your actual API key
       showModal(modalDialog(
         title = "Off-Topic Warning",
         "Please stay on topic. Kindly provide a relevant answer to the question.",
@@ -646,7 +645,7 @@ server <- function(input, output, session) {
 
   observeEvent(input$nextToGlimpse, {
     user_answers <- unlist(chat_history()[chat_history()$Role == "User", "Message"])
-    predicted_career_paths(predictCareerPaths(user_answers, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ"))  
+    predicted_career_paths(predictCareerPaths(user_answers, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ"))  # Use your actual API key
    
     user_career_paths(rbind(user_career_paths(), data.frame(Date = Sys.Date(), Career_Path = paste(predicted_career_paths(), collapse = ", "), stringsAsFactors = FALSE)))
 
@@ -685,7 +684,7 @@ server <- function(input, output, session) {
     experience_level <- input$experience
    
     if (!is.null(job_title_input) && !is.null(experience_level)) {
-      response <- predictSalary(job_title_input, experience_level, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")  
+      response <- predictSalary(job_title_input, experience_level, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")  # Use your actual API key
       salary_responses(rbind(salary_responses(), data.frame(Job_Title = job_title_input, Experience_Level = experience_level, Response = response, stringsAsFactors = FALSE)))
     }
   })
@@ -722,7 +721,7 @@ server <- function(input, output, session) {
     user_text <- input$userInput
     predicted_paths <- predicted_career_paths()
     
-    response_data <- connectCareerToChatbot(user_text, predicted_paths, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")  
+    response_data <- connectCareerToChatbot(user_text, predicted_paths, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")  # Use your actual API key
     
     chat_history(rbind(chat_history(), data.frame(Role = "User", Message = user_text, stringsAsFactors = FALSE)))
 
@@ -967,7 +966,7 @@ server <- function(input, output, session) {
   output$careerPathNetwork <- renderVisNetwork({
     req(input$selected_career)
     selected_career <- input$selected_career
-    career_steps <- getCareerPathSteps(selected_career, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")
+    career_steps <- getCareerPathSteps(selected_career, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")  # Use your actual API key
 
     # Create nodes and edges
     nodes <- data.frame(id = 1:length(career_steps), label = career_steps, stringsAsFactors = FALSE)
@@ -979,7 +978,13 @@ server <- function(input, output, session) {
       visOptions(highlightNearest = TRUE) %>%
       visLayout(randomSeed = 123)
   })
+
+  # Observer for Moving to the Post Survey
+  observeEvent(input$nextToPostSurvey, {
+    updateTabsetPanel(session, "tabs", selected = "Post Survey")
+  })
 }
 
 shinyApp(ui = ui, server = server)
+
 
