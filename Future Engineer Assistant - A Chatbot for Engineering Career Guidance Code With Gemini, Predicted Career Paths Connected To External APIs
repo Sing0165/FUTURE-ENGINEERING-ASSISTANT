@@ -134,6 +134,9 @@ ui <- fluidPage(
     
     .centered-congratulation { text-align: center; font-size: 28px; }
     .career-path { margin-bottom: 10px; }
+    .split-table { display: flex; }
+    .split-table > div { flex: 1; text-align: center; border-left: 1px solid black; }
+    .split-table > div:first-child { border-left: none; }
   ")),
 
   # Title Section
@@ -282,7 +285,11 @@ ui <- fluidPage(
                            tags$div(class = "completion-box",
                                     h2("Quick Glimpse"),
                                     p("Based on the options selected, a personalized summary of preferences and interests has been created. It appears that the choices align with the following themes:"),
-                                    DTOutput("predictedCareerPathsTable"),
+                                    tags$div(class = "split-table",
+                                             DTOutput("predictedCareerPathsTable1"),
+                                             tags$div(),
+                                             DTOutput("predictedCareerPathsTable2")
+                                    ),
                                     downloadButton("downloadCareerPaths", "Download Predicted Career Paths CSV", class = "btn-primary"),
                                     actionButton("nextToPostSurvey", "Next to Post Survey", class = "btn-primary")  
                            )
@@ -675,15 +682,26 @@ server <- function(input, output, session) {
     updateTabsetPanel(session, "tabs", selected = "Quick Glimpse")
   })
 
-  output$predictedCareerPathsTable <- renderDT({
+  output$predictedCareerPathsTable1 <- renderDT({
     req(predicted_career_paths())
     
-    df <- data.frame(Career_Path = predicted_career_paths(), stringsAsFactors = FALSE)
-    datatable(df, options = list(pageLength = 10, autoWidth = TRUE, 
+    df1 <- data.frame(Career_Path = predicted_career_paths()[1:ceiling(length(predicted_career_paths()) / 2)], stringsAsFactors = FALSE)
+    datatable(df1, options = list(pageLength = 10, autoWidth = TRUE, 
                                   dom = 't', 
                                   columnDefs = list(list(className = 'dt-left', targets = 0))), 
               rownames = FALSE, 
               escape = FALSE)  
+  })
+
+  output$predictedCareerPathsTable2 <- renderDT({
+    req(predicted_career_paths())
+    
+    df2 <- data.frame(Career_Path = predicted_career_paths()[(ceiling(length(predicted_career_paths()) / 2) + 1):length(predicted_career_paths())], stringsAsFactors = FALSE)
+    datatable(df2, options = list(pageLength = 10, autoWidth = TRUE, 
+                                  dom = 't', 
+                                  columnDefs = list(list(className = 'dt-left', targets = 0))), 
+              rownames = FALSE, 
+              escape = FALSE) 
   })
 
   output$downloadCareerPaths <- downloadHandler(
