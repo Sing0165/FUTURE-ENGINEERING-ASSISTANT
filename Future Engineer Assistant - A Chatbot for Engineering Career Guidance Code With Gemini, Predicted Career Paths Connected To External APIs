@@ -29,7 +29,7 @@ generateContent <- function(prompt, api_key) {
 }
 
 generateCareerQuestions <- function(api_key) {
-  prompt <- "Generate 10 broad, personalized questions related to career choices for engineering students."  # Updated to broader questions
+  prompt <- "Generate 10 broad, personalized questions related to career choices for engineering students."
   return(unlist(strsplit(generateContent(prompt, api_key), "\n")))
 }
 
@@ -117,19 +117,19 @@ ui <- fluidPage(
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
-      height: 400px; /* Expanded height */
+      height: 400px;
     }
     
     .chat-input {
       flex: 1;
       margin-right: 20px; 
-      height: 100%; /* Full height */
+      height: 100%;
     }
     
     .chat-responses {
       flex: 1;
       margin-left: 20px; 
-      height: 100%; /* Full height */
+      height: 100%;
     }
     
     .centered-congratulation { text-align: center; font-size: 28px; }
@@ -285,8 +285,7 @@ ui <- fluidPage(
                                     h2("Quick Glimpse"),
                                     p("Based on the options selected, a personalized summary of preferences and interests has been created. It appears that the choices align with the following themes:"),
                                     tags$div(class = "split-table",
-                                             DTOutput("predictedCareerPathsTable1"),
-                                             DTOutput("predictedCareerPathsTable2")
+                                             DTOutput("predictedCareerPathsTable")  
                                     ),
                                     downloadButton("downloadCareerPaths", "Download Predicted Career Paths CSV", class = "btn-primary"),
                                     actionButton("nextToPostSurvey", "Next to Post Survey", class = "btn-primary")  
@@ -602,7 +601,7 @@ server <- function(input, output, session) {
         chat_history()$Role[nrow(chat_history())] == "User") {
       last_question <- tail(chat_history()$Message, 1)
       answer_text <- input$chatbotAnswerInput
-      if (!isCareerRelated(answer_text, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")) {
+      if (!isCareerRelated(answer_text, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")) {  # Use your actual API key
         return(tags$div(class = "rect-bubble",
                         paste("The question asked was not answered:", last_question)))
       }
@@ -689,26 +688,15 @@ server <- function(input, output, session) {
     updateTabsetPanel(session, "tabs", selected = "Quick Glimpse")
   })
 
-  output$predictedCareerPathsTable1 <- renderDT({
+  output$predictedCareerPathsTable <- renderDT({
     req(predicted_career_paths())
     
-    df1 <- data.frame(Career_Path = predicted_career_paths()[1:ceiling(length(predicted_career_paths()) / 2)], stringsAsFactors = FALSE)
-    datatable(df1, options = list(pageLength = 10, autoWidth = TRUE, 
+    df <- data.frame(Career_Path = paste(predicted_career_paths(), collapse = "   "), stringsAsFactors = FALSE)  # Collapse career paths with spaces
+    datatable(df, options = list(pageLength = 1, autoWidth = TRUE, 
                                   dom = 't', 
                                   columnDefs = list(list(className = 'dt-left', targets = 0))), 
               rownames = FALSE, 
               escape = FALSE)  
-  })
-
-  output$predictedCareerPathsTable2 <- renderDT({
-    req(predicted_career_paths())
-    
-    df2 <- data.frame(Career_Path = predicted_career_paths()[(ceiling(length(predicted_career_paths()) / 2) + 1):length(predicted_career_paths())], stringsAsFactors = FALSE)
-    datatable(df2, options = list(pageLength = 10, autoWidth = TRUE, 
-                                  dom = 't', 
-                                  columnDefs = list(list(className = 'dt-left', targets = 0))), 
-              rownames = FALSE, 
-              escape = FALSE) 
   })
 
   output$downloadCareerPaths <- downloadHandler(
