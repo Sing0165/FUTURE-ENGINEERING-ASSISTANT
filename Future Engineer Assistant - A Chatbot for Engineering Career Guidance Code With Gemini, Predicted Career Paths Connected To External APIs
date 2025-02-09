@@ -215,8 +215,10 @@ ui <- fluidPage(
                  tags$li("Interact with the chatbot to obtain predicted career paths (5–30-minute online platform)"),
                  tags$li("Complete a post-survey (5–7-minute online survey)")
                ),
-               tags$strong("Purpose: The research aims to understand engineering students' perceptions on the use of an AI platform to select their career paths."),
-               tags$strong("Participants: Around 300 people will be involved within this research."),
+               tags$strong("Purpose:"),
+               tags$p("The research aims to understand engineering students' perceptions on the use of an AI platform to select their career paths."),
+               tags$strong("Participants:"),
+               tags$p("Around 300 people will be involved within this research."),
                tags$a(href = "https://ousurvey.qualtrics.com/jfe/form/SV_0wBJjQYoTv2v0ii", target = "_blank",
                       class = "important-link", "Complete Pre-Survey"),
                checkboxInput("preSurveyCheck", "I have completed the pre-survey.", value = FALSE),
@@ -297,7 +299,7 @@ ui <- fluidPage(
 
                 tabPanel("Post Survey",
                          fluidPage(
-                           tags$div(class = "completion-box",
+                           tags$div(class = "completion-box", style = "text-align: left;",
                                     h2("Please Complete Post Survey"),
                                     p("Thank you for taking the time to participate in this survey. Your involvement is crucial for the success of our research study. The data you provide will be utilized for both the pilot testing and final results, helping us evaluate the effectiveness of the AI-guided platform. Your responses will directly inform how the platform is designed to assist undergraduate engineering students in selecting their majors. We deeply appreciate the valuable insights you are contributing to this project.
 
@@ -305,10 +307,10 @@ As a participant, your feedback will help us understand how students perceive an
 
 Once you complete the survey, you will be directed to the chatbot section, where you can engage with the AI tool. This section will give you the opportunity to interact with the platform firsthand and explore how it can assist with career and major decisions. Your experience with the chatbot will help us assess its performance and make necessary improvements before the final implementation.
 
-We truly appreciate your time and effort in contributing to this research. Your participation will make a significant impact on the future development of the AI-guided platform. Should you have any questions or concerns during or after completing the survey, please don't hesitate to reach out to Dr. Javeed Kittur at jkittur@ou.edu. Thank you again for being a part of this important study!"),
+We truly appreciate your time and effort in contributing to this research. Your participation will make a significant impact on the future development of the AI-guided platform. Should you have any questions or concerns during or after completing the survey, please don't hesitate to reach out to Dr. Javeed Kittur at jkittur@ou.edu. Thank you again for being a part of this important study."),
                                     tags$a(href = "https://ousurvey.qualtrics.com/jfe/form/SV_3n3jlqsnkoMkn0W", target = "_blank", 
                                             class = "important-link", "Click here to complete the Post Survey"),
-                                    actionButton("nextToWelcomeChatbot", "Next to Welcome Chatbot", class = "btn-primary")  # Moved from below
+                                    actionButton("nextToWelcomeChatbot", "Next to Welcome Chatbot", class = "btn-primary")  
                            )
                          )
                 ),
@@ -319,7 +321,7 @@ We truly appreciate your time and effort in contributing to this research. Your 
                                     img(src = "https://png.pngtree.com/png-clipart/20230401/original/pngtree-smart-chatbot-cartoon-clipart-png-image_9015126.png", height = "200px", align = "center"),
                                     h3("Welcome to Gemini Chatbot"),
                                     p("The Future Engineer Assistant (FEA) is an innovative AI-powered chatbot designed specifically to provide personalized career guidance for engineering students. By leveraging advanced natural language processing (NLP) and generative AI technologies, the FEA engages users in dynamic, interactive conversations that facilitate the exploration of potential career paths. Unlike traditional career counseling methods, which can be limited in personalization and immediacy, the FEA is capable of tailoring its responses based on real-time user inputs. This enables the chatbot to offer customized advice and insights that align more closely with individual interests and academic backgrounds."),
-                                    p("At the heart of the FEA's functionality is its ability to generate context-specific questions aimed at uncovering important information about users’ preferences, aspirations, and academic strengths. By employing a generative AI model integrated through an API, the chatbot can produce engaging prompts that encourage students to reflect on their career goals. This dynamic questioning process not only enhances the depth of information gathered but also fosters an interactive environment where students feel comfortable exploring their options. The ability of the FEA to adaptively shift its dialogue based on input allows for a more personalized experience that feels less like a scripted interaction and more like a meaningful conversation with a knowledgeable mentor."),
+                                    p("At the heart of the FEA's functionality is its ability to generate context-specific questions aimed at uncovering important information about users’ preferences, aspirations, and academic strengths. By employing a generative AI model integrated through an API, the chatbot can produce engaging prompts that encourage students to reflect on their career goals. This dynamic questioning process enhances the depth of information gathered and fosters an interactive environment where students feel comfortable exploring their options."),
                                     actionButton("nextToGeminiChatbot", "Next to Gemini Chatbot", class = "btn-primary")
                            )
                          )
@@ -373,7 +375,7 @@ We truly appreciate your time and effort in contributing to this research. Your 
                                       actionButton("loadingSalaryResponse", "Waiting for Response...", loading = TRUE, style = "display: none;"),
                                       plotlyOutput("salary_histogram"),
                                       plotlyOutput("salary_boxplot"),
-                                      actionButton("nextToEndSession", "Next to End Session", class = "btn-primary")  # Adjusted position
+                                      actionButton("nextToEndSession", "Next to End Session", class = "btn-primary")  
                              )
                            )
                          )
@@ -648,15 +650,15 @@ server <- function(input, output, session) {
     chat_history(rbind(chat_history(), data.frame(Role = "User", Message = answer_text, stringsAsFactors = FALSE)))
     
     # Only call askCareerQuestions if the current index is valid
-    if (current_question_index() <= 10) {
-      askCareerQuestions()
-    } else {
+    if (current_question_index() > 10) {
       showModal(modalDialog(
         title = "Error",
-        "Please answer all the questions to see the predicted career paths.",
+        "Please ensure you answer all questions to see the predicted career paths.",
         easyClose = TRUE,
         footer = NULL
       ))
+    } else {
+      askCareerQuestions()
     }
     
     updateTextAreaInput(session, "chatbotAnswerInput", value = "")
@@ -676,7 +678,7 @@ server <- function(input, output, session) {
   })
 
   output$predictedCareerPaths <- renderUI({
-    if (current_question_index() > length(randomized_questions())) {
+    if (current_question_index() == (length(randomized_questions()) + 1)) {
       actionButton("nextToGlimpse", "Next to See Predicted Career Paths", class = "btn-primary")
     }
   })
