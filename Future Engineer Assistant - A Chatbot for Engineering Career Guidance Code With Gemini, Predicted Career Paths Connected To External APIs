@@ -112,26 +112,26 @@ ui <- fluidPage(
     .sticky-title { position: sticky; top: 0; background-color: #841617; color: white; padding: 10px; }
     .completion-box { border: 2px solid #841617; border-radius: 15px; padding: 20px; background-color: rgba(255, 255, 255, 0.9); text-align: center; margin-top: 20px; }
     .important-link { font-size: 18px; font-weight: bold; color: #007bff; text-align: center; margin-top: 10px; }
-    
+
     .chat-container {
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
       height: 400px;
     }
-    
+
     .chat-input {
       flex: 1;
       margin-right: 20px; 
       height: 100%;
     }
-    
+
     .chat-responses {
       flex: 1;
       margin-left: 20px; 
       height: 100%;
     }
-    
+
     .centered-congratulation { text-align: center; font-size: 28px; }
     .career-path { margin-bottom: 10px; }
     .split-table { display: flex; justify-content: center; margin: 20px 0; }
@@ -209,8 +209,6 @@ ui <- fluidPage(
                h3("Pre-Survey Confirmation"),
                tags$p("Please confirm that you have completed the pre-survey."),
                tags$p("Complete this survey and contact me (akshay.singh-1@ou.edu) to ask any questions regarding participation in the research."),
-               tags$p("What is the purpose of this research? This research aims to understand engineering students’ perceptions on the use of an AI platform to select their career path."),
-               tags$p("How many participants will be in this research? About 300 people will take part in this research."),
                tags$p("What will participants be asked to do? If you agree to be in this research, you will be required to complete three tasks:
                        1. Complete a pre-survey (5–7-minute online survey)
                        2. Interact with the chatbot to obtain predicted career paths (5–30-minute online platform)
@@ -239,11 +237,11 @@ ui <- fluidPage(
                                              h3("Instructions:"),
                                              tags$div(class = "step-box",
                                                       tags$h4("Step One: Completing the Personalized Questionnaire"),
-                                                      tags$p("In the first step, you will engage with a personalized questionnaire designed to gather insights about your academic career goals, majors, interests, and more. This questionnaire consists of 10 unique questions, dynamically generated using the Google Gemini Pro API. Each question is tailored to elicit comprehensive responses that reflect your aspirations and preferences in the field of engineering. As you proceed through the questionnaire, your answers will be used to generate a set of recommended career paths that align with your unique strengths and academic backgrounds. This foundational step aims to equip you with valuable insights into potential career trajectories, fostering a deeper understanding of your professional aspirations."),
+                                                      tags$p("You will respond to 10 questions designed to gather insights about your academic career goals, majors, interests, and more. This foundational step aims to equip you with valuable insights into potential career trajectories, fostering a deeper understanding of your professional aspirations."),
                                              ),
                                              tags$div(class = "step-box",
                                                       tags$h4("Step Two: Interacting with the FEA Chatbot"),
-                                                      tags$p("The second step involves interacting with the Future Engineer Assistant (FEA) chatbot, where you can ask questions about your predicted career paths and other educational or career-related queries. You have the flexibility to engage with the chatbot either through text or audio input, allowing for a hands-free conversational experience. This dynamic interaction enables you to seek personalized advice and insights tailored to your career interests, providing you with a deeper understanding of the various opportunities available in your chosen field. Whether you wish to explore specific job roles or inquire about related educational pathways, the FEA chatbot is designed to facilitate meaningful discussions that can aid in your decision-making process as you navigate your academic and career journey."),
+                                                      tags$p("This step involves interacting with the Future Engineer Assistant (FEA) chatbot, where you can ask questions about your predicted career paths and other educational or career-related queries. You have the flexibility to engage with the chatbot either through text or audio input, allowing for a hands-free conversational experience.")
                                              )
                                     ),
                                     actionButton("continueToQuestionnaire", "Next to Questionnaire", class = "btn-primary")
