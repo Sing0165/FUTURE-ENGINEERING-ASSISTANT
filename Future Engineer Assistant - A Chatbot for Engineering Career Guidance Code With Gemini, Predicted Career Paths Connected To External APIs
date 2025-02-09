@@ -209,10 +209,14 @@ ui <- fluidPage(
                h3("Pre-Survey Confirmation"),
                tags$p("Please confirm that you have completed the pre-survey."),
                tags$p("Complete this survey and contact me (akshay.singh-1@ou.edu) to ask any questions regarding participation in the research."),
-               tags$p("What will participants be asked to do? If you agree to be in this research, you will be required to complete three tasks:
-                       1. Complete a pre-survey (5–7-minute online survey)
-                       2. Interact with the chatbot to obtain predicted career paths (5–30-minute online platform)
-                       3. Complete a post-survey (5–7-minute online survey)"),
+               tags$p("What will participants be asked to do? If you agree to be in this research, you will be required to complete three tasks:"),
+               tags$ul(
+                 tags$li("Complete a pre-survey (5–7-minute online survey)"),
+                 tags$li("Interact with the chatbot to obtain predicted career paths (5–30-minute online platform)"),
+                 tags$li("Complete a post-survey (5–7-minute online survey)")
+               ),
+               tags$strong("Purpose: The research aims to understand engineering students' perceptions on the use of an AI platform to select their career paths."),
+               tags$strong("Participants: Around 300 people will be involved within this research."),
                tags$a(href = "https://ousurvey.qualtrics.com/jfe/form/SV_0wBJjQYoTv2v0ii", target = "_blank",
                       class = "important-link", "Complete Pre-Survey"),
                checkboxInput("preSurveyCheck", "I have completed the pre-survey.", value = FALSE),
@@ -304,7 +308,7 @@ Once you complete the survey, you will be directed to the chatbot section, where
 We truly appreciate your time and effort in contributing to this research. Your participation will make a significant impact on the future development of the AI-guided platform. Should you have any questions or concerns during or after completing the survey, please don't hesitate to reach out to Dr. Javeed Kittur at jkittur@ou.edu. Thank you again for being a part of this important study!"),
                                     tags$a(href = "https://ousurvey.qualtrics.com/jfe/form/SV_3n3jlqsnkoMkn0W", target = "_blank", 
                                             class = "important-link", "Click here to complete the Post Survey"),
-                                    actionButton("nextToWelcomeChatbot", "Next to Welcome Chatbot", class = "btn-primary")
+                                    actionButton("nextToWelcomeChatbot", "Next to Welcome Chatbot", class = "btn-primary")  # Moved from below
                            )
                          )
                 ),
@@ -369,7 +373,7 @@ We truly appreciate your time and effort in contributing to this research. Your 
                                       actionButton("loadingSalaryResponse", "Waiting for Response...", loading = TRUE, style = "display: none;"),
                                       plotlyOutput("salary_histogram"),
                                       plotlyOutput("salary_boxplot"),
-                                      actionButton("nextToEndSession", "Next to End Session", class = "btn-primary")
+                                      actionButton("nextToEndSession", "Next to End Session", class = "btn-primary")  # Adjusted position
                              )
                            )
                          )
@@ -689,8 +693,8 @@ server <- function(input, output, session) {
   output$predictedCareerPathsTable <- renderDT({
     req(predicted_career_paths())
     
-    df <- data.frame(Career_Path = paste(predicted_career_paths(), collapse = "   "), stringsAsFactors = FALSE)  # Collapse career paths with spaces
-    datatable(df, options = list(pageLength = 1, autoWidth = TRUE, 
+    df <- data.frame(Career_Path = unlist(strsplit(paste(predicted_career_paths(), collapse = "   "), ",")), stringsAsFactors = FALSE)  # Collapse career paths with spaces
+    datatable(df, options = list(pageLength = 5, autoWidth = TRUE, 
                                   dom = 't', 
                                   columnDefs = list(list(className = 'dt-left', targets = 0))), 
               rownames = FALSE, 
