@@ -438,6 +438,20 @@ server <- function(input, output, session) {
 
   tabs_access <- reactiveVal(c(FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE))
 
+  # Function to check if the user's input is on topic
+  checkUserInput <- function(input_text) {
+    if (!isCareerRelated(input_text, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")) {
+      showModal(modalDialog(
+        title = "Staying on Topic",
+        "Please stay on topic. We are having an essential conversation regarding your future career paths.",
+        easyClose = TRUE,
+        footer = NULL
+      ))
+      return(FALSE)
+    }
+    return(TRUE)
+  }
+
   observeEvent(input$registerBtn, {
     required_fields <- c(input$first_name, input$last_name, input$username, input$reg_password,
                          input$reg_password_reenter, input$email, input$school, input$year,
@@ -626,14 +640,9 @@ server <- function(input, output, session) {
       return()
     }
 
-    if (!isCareerRelated(answer_text, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")) {
-      showModal(modalDialog(
-        title = "Off-Topic Warning",
-        "Please stay on topic. Kindly provide a relevant answer to the question.",
-        easyClose = TRUE,
-        footer = NULL
-      ))
-      return()  
+    # Check if input is on topic
+    if (!checkUserInput(answer_text)) {
+      return()  # Exit if the input is off-topic
     }
 
     # Update chat history for user input
