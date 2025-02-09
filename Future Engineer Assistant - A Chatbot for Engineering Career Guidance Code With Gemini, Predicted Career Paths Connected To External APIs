@@ -29,7 +29,7 @@ generateContent <- function(prompt, api_key) {
 }
 
 generateCareerQuestions <- function(api_key) {
-  prompt <- "Generate 12 personalized questions related to career choices for engineering students."
+  prompt <- "Generate 10 broad, personalized questions related to career choices for engineering students."  # Updated to broader questions
   return(unlist(strsplit(generateContent(prompt, api_key), "\n")))
 }
 
@@ -37,8 +37,8 @@ predictCareerPaths <- function(answers, api_key) {
   if (length(answers) == 0) {
     return(NULL)
   }
-
-  prompt <- paste("Based on the following user responses, please suggest 5 very specific career paths for an engineering student:", paste(answers, collapse = " "))
+  
+  prompt <- paste("Based on the following user responses, please suggest 5 very specific career paths for an engineering student.", paste(answers, collapse = " "))
   response <- generateContent(prompt, api_key)
   return(unlist(strsplit(response, ",")))
 }
@@ -237,7 +237,7 @@ ui <- fluidPage(
                                              h3("Instructions:"),
                                              tags$div(class = "step-box",
                                                       tags$h4("Step One: Completing the Personalized Questionnaire"),
-                                                      tags$p("In the first step, you will engage with a personalized questionnaire designed to gather insights about your academic career goals, majors, interests, and more. This questionnaire consists of 10-12 unique questions, dynamically generated using the Google Gemini Pro API. Each question is tailored to elicit comprehensive responses that reflect your aspirations and preferences in the field of engineering. As you proceed through the questionnaire, your answers will be used to generate a set of recommended career paths that align with your unique strengths and academic backgrounds. This foundational step aims to equip you with valuable insights into potential career trajectories, fostering a deeper understanding of your professional aspirations."),
+                                                      tags$p("In the first step, you will engage with a personalized questionnaire designed to gather insights about your academic career goals, majors, interests, and more. This questionnaire consists of 10 unique questions, dynamically generated using the Google Gemini Pro API. Each question is tailored to elicit comprehensive responses that reflect your aspirations and preferences in the field of engineering. As you proceed through the questionnaire, your answers will be used to generate a set of recommended career paths that align with your unique strengths and academic backgrounds. This foundational step aims to equip you with valuable insights into potential career trajectories, fostering a deeper understanding of your professional aspirations."),
                                              ),
                                              tags$div(class = "step-box",
                                                       tags$h4("Step Two: Interacting with the FEA Chatbot"),
@@ -284,7 +284,7 @@ ui <- fluidPage(
                                     p("Based on the options selected, a personalized summary of preferences and interests has been created. It appears that the choices align with the following themes:"),
                                     DTOutput("predictedCareerPathsTable"),
                                     downloadButton("downloadCareerPaths", "Download Predicted Career Paths CSV", class = "btn-primary"),
-                                    actionButton("nextToPostSurvey", "Next to Post Survey", class = "btn-primary")  # Make sure the button works
+                                    actionButton("nextToPostSurvey", "Next to Post Survey", class = "btn-primary")  
                            )
                          )
                 ),
@@ -421,7 +421,7 @@ server <- function(input, output, session) {
   current_question_index <- reactiveVal(1)
   randomized_questions <- reactiveVal()  
   chatbot_responses <- reactiveVal(data.frame(Question = character(), Response = character(), stringsAsFactors = FALSE))
- 
+
   user_details <- loadUserData()
   recommended_careers <- reactiveVal(NULL)
   predicted_career_paths <- reactiveVal(NULL)
@@ -572,6 +572,9 @@ server <- function(input, output, session) {
       current_question_index(current_question_index() + 1)
     } else {
       chat_history(rbind(chat_history(), data.frame(Role = "Bot", Message = "All questions answered! Please click the next button to see your predicted career paths.", stringsAsFactors = FALSE)))
+      output$predictedCareerPaths <- renderUI({
+        actionButton("nextToGlimpse", "Next to See Predicted Career Paths", class = "btn-primary")
+      })
       recommendCareers()
     }
   }
@@ -582,7 +585,7 @@ server <- function(input, output, session) {
         chat_history()$Role[nrow(chat_history())] == "User") {
       last_question <- tail(chat_history()$Message, 1)
       answer_text <- input$chatbotAnswerInput
-      if (!isCareerRelated(answer_text, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")) {  # Use your actual API key
+      if (!isCareerRelated(answer_text, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")) {
         return(tags$div(class = "rect-bubble",
                         paste("The question asked was not answered:", last_question)))
       }
@@ -616,7 +619,7 @@ server <- function(input, output, session) {
       return()
     }
 
-    if (!isCareerRelated(answer_text, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")) {  # Use your actual API key
+    if (!isCareerRelated(answer_text, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")) {
       showModal(modalDialog(
         title = "Off-Topic Warning",
         "Please stay on topic. Kindly provide a relevant answer to the question.",
@@ -628,7 +631,19 @@ server <- function(input, output, session) {
 
     # Update chat history for user input
     chat_history(rbind(chat_history(), data.frame(Role = "User", Message = answer_text, stringsAsFactors = FALSE)))
-    askCareerQuestions()
+    
+    # Only call askCareerQuestions if the current index is valid
+    if (current_question_index() <= 10) {
+      askCareerQuestions()
+    } else {
+      showModal(modalDialog(
+        title = "Error",
+        "Please answer all the questions to see the predicted career paths.",
+        easyClose = TRUE,
+        footer = NULL
+      ))
+    }
+    
     updateTextAreaInput(session, "chatbotAnswerInput", value = "")
   })
 
@@ -653,8 +668,7 @@ server <- function(input, output, session) {
 
   observeEvent(input$nextToGlimpse, {
     user_answers <- unlist(chat_history()[chat_history()$Role == "User", "Message"])
-    predicted_career_paths(predictCareerPaths(user_answers, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ"))  # Use your actual API key
-   
+    predicted_career_paths(predictCareerPaths(user_answers, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ"))  
     user_career_paths(rbind(user_career_paths(), data.frame(Date = Sys.Date(), Career_Path = paste(predicted_career_paths(), collapse = ", "), stringsAsFactors = FALSE)))
 
     tabs_access(c(TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE))  
@@ -665,11 +679,11 @@ server <- function(input, output, session) {
     req(predicted_career_paths())
     
     df <- data.frame(Career_Path = predicted_career_paths(), stringsAsFactors = FALSE)
-    datatable(df, options = list(pageLength = 5, autoWidth = TRUE, 
+    datatable(df, options = list(pageLength = 10, autoWidth = TRUE, 
                                   dom = 't', 
                                   columnDefs = list(list(className = 'dt-left', targets = 0))), 
               rownames = FALSE, 
-              escape = FALSE)  # Escape to allow HTML
+              escape = FALSE)  
   })
 
   output$downloadCareerPaths <- downloadHandler(
@@ -694,14 +708,14 @@ server <- function(input, output, session) {
     experience_level <- input$experience
    
     if (!is.null(job_title_input) && !is.null(experience_level)) {
-      response <- predictSalary(job_title_input, experience_level, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")  # Use your actual API key
+      response <- predictSalary(job_title_input, experience_level, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")  
       salary_responses(rbind(salary_responses(), data.frame(Job_Title = job_title_input, Experience_Level = experience_level, Response = response, stringsAsFactors = FALSE)))
     }
   })
 
   output$salaryResponsesTable <- renderDT({
     salary_responses()
-  }, options = list(pageLength = 5, autoWidth = TRUE));
+  }, options = list(pageLength = 10, autoWidth = TRUE));
 
   observe({
     updateSelectInput(session, "job_title", choices = predicted_career_paths())
@@ -731,7 +745,7 @@ server <- function(input, output, session) {
     user_text <- input$userInput
     predicted_paths <- predicted_career_paths()
     
-    response_data <- connectCareerToChatbot(user_text, predicted_paths, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")  # Use your actual API key
+    response_data <- connectCareerToChatbot(user_text, predicted_paths, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")  
     
     chat_history(rbind(chat_history(), data.frame(Role = "User", Message = user_text, stringsAsFactors = FALSE)))
 
@@ -743,6 +757,9 @@ server <- function(input, output, session) {
     chatbot_responses(rbind(chatbot_responses(), data.frame(Question = user_text, Response = response_data$response, stringsAsFactors = FALSE)))
 
     user_chat_history(rbind(user_chat_history(), data.frame(Date = Sys.Date(), Chat = user_text, stringsAsFactors = FALSE)))
+
+    # Text-to-audio for chatbot responses
+    session$sendCustomMessage("speak", response_data$response)
 
     updateTextAreaInput(session, "userInput", value = "")
   });
@@ -769,7 +786,7 @@ server <- function(input, output, session) {
 
   observeEvent(input$viewCareerPaths, {
     output$dashboardOutput <- renderUI({
-      DT::datatable(user_career_paths(), options = list(pageLength = 5, autoWidth = TRUE))
+      DT::datatable(user_career_paths(), options = list(pageLength = 10, autoWidth = TRUE))
     })
   })
 
@@ -976,7 +993,7 @@ server <- function(input, output, session) {
   output$careerPathNetwork <- renderVisNetwork({
     req(input$selected_career)
     selected_career <- input$selected_career
-    career_steps <- getCareerPathSteps(selected_career, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")  # Use your actual API key
+    career_steps <- getCareerPathSteps(selected_career, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")  
 
     # Create nodes and edges
     nodes <- data.frame(id = 1:length(career_steps), label = career_steps, stringsAsFactors = FALSE)
