@@ -134,9 +134,8 @@ ui <- fluidPage(
     
     .centered-congratulation { text-align: center; font-size: 28px; }
     .career-path { margin-bottom: 10px; }
-    .split-table { display: flex; }
-    .split-table > div { flex: 1; text-align: center; border-left: 1px solid black; }
-    .split-table > div:first-child { border-left: none; }
+    .split-table { display: flex; justify-content: center; margin: 20px 0; }
+    .split-table > div { flex: 1; text-align: center; }
   ")),
 
   # Title Section
@@ -287,7 +286,6 @@ ui <- fluidPage(
                                     p("Based on the options selected, a personalized summary of preferences and interests has been created. It appears that the choices align with the following themes:"),
                                     tags$div(class = "split-table",
                                              DTOutput("predictedCareerPathsTable1"),
-                                             tags$div(),
                                              DTOutput("predictedCareerPathsTable2")
                                     ),
                                     downloadButton("downloadCareerPaths", "Download Predicted Career Paths CSV", class = "btn-primary"),
@@ -337,7 +335,8 @@ We truly appreciate your time and effort in contributing to this research. Your 
                                           width = '100%'),
                              uiOutput("voiceControls"),
                              tags$hr(),
-                             textAreaInput("userInput", "Ask your question here:", placeholder = "Type your question here...", rows = 7)
+                             textAreaInput("userInput", "Ask your question here:", placeholder = "Type your question here...", rows = 7),
+                             actionButton("askQuestionBtn", "Ask Question", class = "btn-primary")
                            ),
                            mainPanel(
                              tags$div(class = "pink-box chat-responses",
@@ -347,7 +346,6 @@ We truly appreciate your time and effort in contributing to this research. Your 
                                           DTOutput("chatOutputResponses")
                                       ),
                                       actionButton("loadingResponse", "Waiting for Response...", loading = TRUE, style = "display: none;"),
-                                      actionButton("askQuestionBtn", "Ask Question", class = "btn-primary"),
                                       downloadButton("downloadChatbotResponses", "Download Chatbot Responses CSV", class = "btn-primary"),
                                       actionButton("nextToSalaryPage", "Next to Salary Insights", class = "btn-primary")
                              )
@@ -363,10 +361,8 @@ We truly appreciate your time and effort in contributing to this research. Your 
                              tags$p("2. Provide this information to receive salary insights based on the latest industry standards."),
                              tags$p("3. Note the provided salary insights for future job negotiations."),
                              tags$hr(),
-                             selectInput("job_title", "Select Job Title *",
-                                         choices = NULL),  
-                             selectInput("experience", "Select Experience Level *",
-                                         choices = c("Entry Level", "Mid Level", "Senior Level")),
+                             selectInput("job_title", "Select Job Title *", choices = NULL),  
+                             selectInput("experience", "Select Experience Level *", choices = c("Entry Level", "Mid Level", "Senior Level")),
                              actionButton("askSalaryQuestions", "Get Salary Information", class = "btn-primary")
                            ),
                            mainPanel(
@@ -616,7 +612,19 @@ server <- function(input, output, session) {
 
   observeEvent(input$submitAnswerBtn, {
     req(input$chatbotAnswerInput)
+
     answer_text <- input$chatbotAnswerInput
+
+    # Check if the answer is empty
+    if (answer_text == "") {
+      showModal(modalDialog(
+        title = "Input Warning",
+        "Please answer Question #", current_question_index() - 1,
+        easyClose = TRUE,
+        footer = NULL
+      ))
+      return()
+    }
 
     # Check word count
     word_count <- str_count(answer_text, "\\S+")
@@ -624,16 +632,6 @@ server <- function(input, output, session) {
       showModal(modalDialog(
         title = "Word Count Warning",
         "Please ensure your answer is between 3 to 120 words.",
-        easyClose = TRUE,
-        footer = NULL
-      ))
-      return()
-    }
-
-    if (answer_text == "") {
-      showModal(modalDialog(
-        title = "Input Warning",
-        "Please answer Question #", current_question_index() - 1,
         easyClose = TRUE,
         footer = NULL
       ))
