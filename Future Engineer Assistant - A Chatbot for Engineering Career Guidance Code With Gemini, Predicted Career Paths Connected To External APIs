@@ -94,7 +94,7 @@ ui <- fluidPage(
     .navbar a { color: #333333 !important; }
     .container { background-color: rgba(255, 255, 255, 0.9); border-radius: 10px; padding: 25px; box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3); color: #343a40; }
     h1, h3, h4 { color: #000000; text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3); font-size: 22px; }
-    .btn { width: 100%; margin: 10px 0; font-size: 16px; border-radius: 25px; background-color: #841617; color: #ffffff; border: none; padding: 10px; transition: background 0.3s ease; }
+    .btn { width: auto; margin: 10px 0; font-size: 16px; border-radius: 25px; background-color: #841617; color: #ffffff; border: none; padding: 10px; transition: background 0.3s ease; }
     .btn:hover { background-color: #6f1417; }
     .footer { text-align: center; padding: 20px; color: #ffffff; }
     .welcome-box, .registration-box, .header-box, .chat-box, .pink-box { background-color: rgba(255, 255, 255, 0.9); border-radius: 15px; padding: 30px; box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3); margin-bottom: 20px; }
@@ -137,10 +137,10 @@ ui <- fluidPage(
   ")),
 
   # Title Section
-  tags$div(class = "bubble-title", "Future Engineer Assistant - ShinyGeminiPro App"),
+  tags$div(class = "bubble-title", "Future Engineer Assistant"),
   tags$div(img(src = "cute_robot_logo.png", height = "100px", align = "center")),
 
-      # Login Section
+  # Login Section
   conditionalPanel(
     condition = "!output.registered && !output.loggedIn",
     fluidPage(
@@ -148,8 +148,8 @@ ui <- fluidPage(
                h3("Login to Future Engineer Assistant"),
                textInput("login_username", "Username *", placeholder = "Enter your username..."),
                passwordInput("login_password", "Password *"),
-               actionButton("loginBtn", "Login", class = "btn-primary"),
-               tags$div(style = "text-align: center; margin-top: 10px,",
+               actionButton("loginBtn", "Login", class = "btn-primary", style = "width: auto;"),
+               tags$div(style = "text-align: center; margin-top: 10px;",
                         tags$a(href = "#", onclick = "Shiny.setInputValue('navigateToRegistration', 1); return false;", "Don't have an account? Sign up", style = "margin-right: 15px;"),
                         tags$a(href = "#", onclick = "Shiny.setInputValue('termsAndConditionsClicked', 1); return false;", "Terms and Conditions", style = "margin-right: 15px;"),
                         tags$a(href = "#", onclick = "Shiny.setInputValue('privacyPolicyClicked', 1); return false;", "Privacy Policy")
@@ -232,10 +232,7 @@ ui <- fluidPage(
                            tags$div(class = "welcome-box",
                                     img(src = "welcome_image.png", height = "200px", align = "center"), 
                                     h3("Introduction"),
-                                    p("As the field of engineering continues to grow, undergraduate and graduate students face numerous career choices, making it challenging to decide on the best path. This project’s aim is to establish an interactive chatbot tailored specifically for engineering undergraduates/graduates."),
-                                    p("Welcome to the Future Engineer Assistant (FEA) app, a dynamic and interactive platform designed specifically for engineering students navigating the complexities of career selection. In a rapidly evolving field where opportunities abound, finding the right career path can be both exciting and daunting. The FEA harnesses the power of generative AI and natural language processing to engage users in personalized conversations, helping them explore potential career trajectories while aligning their unique skills and interests with industry demands. As you journey through the application, you'll encounter tailored questionnaires, insightful recommendations, and interactive visualizations that empower you to make informed decisions about your future.
-
-Our application is more than just a career guidance tool; it is a comprehensive resource that fosters an open dialogue about your aspirations and concerns. By leveraging advanced technologies, the FEA not only provides practical information but also encourages self-reflection and exploration. The user-friendly interface makes it easy to navigate through various sections, from answering thought-provoking questions to interacting with our AI-powered chatbot. With the FEA guiding you, you'll gain valuable insights into potential career paths, salary expectations, and necessary steps to achieve your professional goals in engineering. Dive in and let us help you shape your future!"),
+                                    p("Welcome to the Future Engineer Assistant (FEA) app, a dynamic and interactive platform designed specifically for engineering students navigating the complexities of career selection. As you journey through the application, you'll encounter tailored questionnaires, insightful recommendations, and interactive visualizations that empower you to make informed decisions about your future. Dive in and let us help you shape your future!"),
                                     tags$div(class = "instructions-box",
                                              h3("Instructions:"),
                                              tags$div(class = "step-box",
