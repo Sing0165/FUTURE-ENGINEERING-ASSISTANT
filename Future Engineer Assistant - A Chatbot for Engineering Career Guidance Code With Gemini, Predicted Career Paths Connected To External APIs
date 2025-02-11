@@ -37,7 +37,7 @@ predictCareerPaths <- function(answers, api_key) {
   if (length(answers) == 0) {
     return(NULL)
   }
-  
+
   prompt <- paste("Based on the following user responses, please suggest 5 very specific career paths for an engineering student.", paste(answers, collapse = " "))
   response <- generateContent(prompt, api_key)
   return(unlist(strsplit(response, ",")))
@@ -351,8 +351,9 @@ ui <- fluidPage(
                            tags$div(class = "completion-box",
                                     h2("Quick Glimpse"),
                                     p("Based on the options selected, a personalized summary of preferences and interests has been created. It appears that the choices align with the following themes:"),
+                                    # Replace the datatable rendering with formatted table printing
                                     tags$div(class = "split-table",
-                                             DTOutput("predictedCareerPathsTable")  
+                                             verbatimTextOutput("predictedCareerPathsTableOutput")  # Replace DTOutput with verbatimTextOutput
                                     ),
                                     downloadButton("downloadCareerPaths", "Download Predicted Career Paths CSV", class = "btn-primary"),
                                     actionButton("nextToPostSurvey", "Next to Post Survey", class = "btn-primary")  
@@ -366,11 +367,11 @@ ui <- fluidPage(
                                     h2("Please Complete Post Survey"),
                                     p("Thank you for taking the time to participate in this survey. Your involvement is crucial for the success of our research study. The data you provide will be utilized for both the pilot testing and final results, helping us evaluate the effectiveness of the AI-guided platform. Your responses will directly inform how the platform is designed to assist undergraduate engineering students in selecting their majors. We deeply appreciate the valuable insights you are contributing to this project.
 
-As a participant, your feedback will help us understand how students perceive and interact with AI when making academic decisions. We are committed to using the information gathered to refine the platform and ensure it meets the needs of students across various engineering disciplines. Your input is essential for enhancing the functionality and user experience of the system.
+                                    As a participant, your feedback will help us understand how students perceive and interact with AI when making academic decisions. We are committed to using the information gathered to refine the platform and ensure it meets the needs of students across various engineering disciplines. Your input is essential for enhancing the functionality and user experience of the system.
 
-Once you complete the survey, you will be directed to the chatbot section, where you can engage with the AI tool. This section will give you the opportunity to interact with the platform firsthand and explore how it can assist with career and major decisions. Your experience with the chatbot will help us assess its performance and make necessary improvements before the final implementation.
+                                    Once you complete the survey, you will be directed to the chatbot section, where you can engage with the AI tool. This section will give you the opportunity to interact with the platform firsthand and explore how it can assist with career and major decisions. Your experience with the chatbot will help us assess its performance and make necessary improvements before the final implementation.
 
-We truly appreciate your time and effort in contributing to this research. Your participation will make a significant impact on the future development of the AI-guided platform. Should you have any questions or concerns during or after completing the survey, please don't hesitate to reach out to Dr. Javeed Kittur at jkittur@ou.edu. Thank you again for being a part of this important study."),
+                                    We truly appreciate your time and effort in contributing to this research. Your participation will make a significant impact on the future development of the AI-guided platform. Should you have any questions or concerns during or after completing the survey, please don't hesitate to reach out to Dr. Javeed Kittur at jkittur@ou.edu. Thank you again for being a part of this important study."),
                                     tags$a(href = "https://ousurvey.qualtrics.com/jfe/form/SV_3n3jlqsnkoMkn0W", target = "_blank", 
                                             class = "important-link", "Click here to complete the Post Survey"),
                                     actionButton("nextToWelcomeChatbot", "Next to Welcome Chatbot", class = "btn-primary")  
@@ -755,20 +756,15 @@ server <- function(input, output, session) {
     updateTabsetPanel(session, "tabs", selected = "Quick Glimpse")
   })
 
-  output$predictedCareerPathsTable <- renderDT({
+  output$predictedCareerPathsTableOutput <- renderPrint({
     req(predicted_career_paths())
     
     df <- data.frame(Career_Path = unlist(strsplit(paste(predicted_career_paths(), collapse = "   "), ",")), stringsAsFactors = FALSE)  # Collapse career paths with spaces
     
     # Clean the text
     df$Career_Path <- sapply(df$Career_Path, clean_text)
-    
+
     print_formatted_table(df)  # Cleaned table display
-    datatable(df, options = list(pageLength = 5, autoWidth = TRUE, 
-                                  dom = 't', 
-                                  columnDefs = list(list(className = 'dt-left', targets = 0))), 
-              rownames = FALSE, 
-              escape = FALSE)  
   })
 
   output$downloadCareerPaths <- downloadHandler(
