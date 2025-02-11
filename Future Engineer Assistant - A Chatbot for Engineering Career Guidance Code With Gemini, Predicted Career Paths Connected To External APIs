@@ -93,57 +93,6 @@ clean_text <- function(text) {
   return(trimws(text))
 }
 
-create_table_border <- function(widths) {
-  paste("+", paste(rep("-", widths + 2), collapse = ""), "+", collapse = "")
-}
-
-print_formatted_table <- function(df) {
-  # Get the maximum width for each column
-  col_widths <- sapply(df, function(x) {
-    max(nchar(as.character(x)), na.rm = TRUE)
-  })
-
-  # Create border line
-  border <- create_table_border(col_widths)
-
-  # Print header
-  cat("\n")
-  cat(paste(rep("-", 80), collapse = ""))
-  cat("\n")
-
-  # Print table
-  cat(border, "\n")
-  # Print column headers
-  cat("|")
-  for (i in 1:length(names(df))) {
-    cat(paste(names(df)[i], width = col_widths[i], right = TRUE, pad = " "))
-    if (i < length(names(df))) {
-      cat("|")
-    }
-  }
-  cat("\n")
-
-  # Print separator after headers
-  cat(border, "\n")
-
-  # Print data rows
-  for (i in 1:nrow(df)) {
-    cat("|")
-    for (j in 1:length(names(df))) {
-      cat(paste(as.character(df[i, j]), width = col_widths[j], right = TRUE, pad = " "))
-      if (j < length(names(df))) {
-        cat("|")
-      }
-    }
-    cat("\n")
-  }
-
-  # Print bottom border
-  cat(border, "\n")
-  cat(paste(rep("-", 80), collapse = ""))
-  cat("\n")
-}
-
 # User Interface
 ui <- fluidPage(
   useShinyjs(),
@@ -192,7 +141,7 @@ ui <- fluidPage(
     }
 
     .centered-congratulation { text-align: center; font-size: 28px; }
-    .career-path { margin-bottom: 10px; }
+    .career-path { margin-bottom: 10px; font-size: 20px; } /* Increased font size for career paths */
     .split-table { display: flex; justify-content: center; margin: 20px 0; }
     .split-table > div { flex: 1; text-align: center; }
   ")),
@@ -757,7 +706,9 @@ server <- function(input, output, session) {
 
     df$Career_Path <- sapply(df$Career_Path, clean_text)
 
-    print_formatted_table(df)
+    # Use styled output for font size
+    styled_output <- paste("<span style='font-size:20px;'>", df$Career_Path, "</span>", collapse = "<br>")
+    HTML(styled_output)
   })
 
   output$downloadCareerPaths <- downloadHandler(
