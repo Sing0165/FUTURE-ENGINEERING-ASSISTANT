@@ -37,7 +37,7 @@ predictCareerPaths <- function(answers, api_key) {
   if (length(answers) == 0) {
     return(NULL)
   }
-
+  
   prompt <- paste("Based on the following user responses, please suggest 5 very specific career paths for an engineering student.", paste(answers, collapse = " "))
   response <- generateContent(prompt, api_key)
   return(unlist(strsplit(response, ",")))
@@ -107,10 +107,6 @@ print_formatted_table <- function(df) {
   border <- create_table_border(col_widths)
 
   # Print header
-  cat("\n")
-  cat(paste(rep("-", 80), collapse = ""))
-  cat("\n")
-  cat(rep(" ", 30), "CAREER PATHS 2025", sep = "")
   cat("\n")
   cat(paste(rep("-", 80), collapse = ""))
   cat("\n")
@@ -351,9 +347,8 @@ ui <- fluidPage(
                            tags$div(class = "completion-box",
                                     h2("Quick Glimpse"),
                                     p("Based on the options selected, a personalized summary of preferences and interests has been created. It appears that the choices align with the following themes:"),
-                                    # Replace the datatable rendering with formatted table printing
                                     tags$div(class = "split-table",
-                                             verbatimTextOutput("predictedCareerPathsTableOutput")  # Replace DTOutput with verbatimTextOutput
+                                             verbatimTextOutput("predictedCareerPathsTableOutput") 
                                     ),
                                     downloadButton("downloadCareerPaths", "Download Predicted Career Paths CSV", class = "btn-primary"),
                                     actionButton("nextToPostSurvey", "Next to Post Survey", class = "btn-primary")  
@@ -639,7 +634,7 @@ server <- function(input, output, session) {
     chatbot_responses(data.frame(Question = character(), Response = character(), stringsAsFactors = FALSE))
     recommended_careers(NULL)
     predicted_career_paths(NULL)  
-    questions <- generateCareerQuestions(api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")  # Use your actual API key
+    questions <- generateCareerQuestions(api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")  
     randomized_questions(questions)
     askCareerQuestions()
   }
@@ -669,7 +664,7 @@ server <- function(input, output, session) {
         chat_history()$Role[nrow(chat_history())] == "User") {
       last_question <- tail(chat_history()$Message, 1)
       answer_text <- input$chatbotAnswerInput
-      if (!isCareerRelated(answer_text, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")) {  # Use your actual API key
+      if (!isCareerRelated(answer_text, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")) {  
         return(tags$div(class = "rect-bubble",
                         paste("The question asked was not answered:", last_question)))
       }
@@ -682,7 +677,6 @@ server <- function(input, output, session) {
 
     answer_text <- input$chatbotAnswerInput
 
-    # Check if the answer is empty
     if (answer_text == "") {
       showModal(modalDialog(
         title = "Input Warning",
@@ -707,7 +701,7 @@ server <- function(input, output, session) {
 
     # Check if input is on topic
     if (!checkUserInput(answer_text)) {
-      return()  # Exit if the input is off-topic
+      return()  
     }
 
     # Update chat history for user input
@@ -759,12 +753,11 @@ server <- function(input, output, session) {
   output$predictedCareerPathsTableOutput <- renderPrint({
     req(predicted_career_paths())
     
-    df <- data.frame(Career_Path = unlist(strsplit(paste(predicted_career_paths(), collapse = "   "), ",")), stringsAsFactors = FALSE)  # Collapse career paths with spaces
-    
-    # Clean the text
+    df <- data.frame(Career_Path = unlist(strsplit(paste(predicted_career_paths(), collapse = "   "), ",")), stringsAsFactors = FALSE)  
+
     df$Career_Path <- sapply(df$Career_Path, clean_text)
 
-    print_formatted_table(df)  # Cleaned table display
+    print_formatted_table(df)
   })
 
   output$downloadCareerPaths <- downloadHandler(
@@ -839,7 +832,6 @@ server <- function(input, output, session) {
 
     user_chat_history(rbind(user_chat_history(), data.frame(Date = Sys.Date(), Chat = user_text, stringsAsFactors = FALSE)))
 
-    # Text-to-audio for chatbot responses
     session$sendCustomMessage("speak", response_data$response)
 
     updateTextAreaInput(session, "userInput", value = "")
