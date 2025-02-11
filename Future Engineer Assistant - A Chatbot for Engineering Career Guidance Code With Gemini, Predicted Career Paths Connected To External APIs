@@ -8,7 +8,7 @@ library(digest)
 library(lubridate)
 library(visNetwork)
 
-# Functions
+# Functions for content generation and career path prediction
 getCareerPathSteps <- function(career_path, api_key) {
   prompt <- paste("List the steps required to reach the highest or chief level for the career path:", career_path)
   response <- generateContent(prompt, api_key)
@@ -83,6 +83,69 @@ isCareerRelated <- function(input_text, api_key) {
   } else {
     return(FALSE)
   }
+}
+
+# Functions to clean text and format tables
+clean_text <- function(text) {
+  # Remove markdown formatting and numbers
+  text <- gsub("\\*\\*+", "", text)
+  text <- gsub("^\\d+\\.\\s*", "", text)
+  return(trimws(text))
+}
+
+create_table_border <- function(widths) {
+  paste("+", paste(rep("-", widths + 2), collapse = ""), "+", collapse = "")
+}
+
+print_formatted_table <- function(df) {
+  # Get the maximum width for each column
+  col_widths <- sapply(df, function(x) {
+    max(nchar(as.character(x)), na.rm = TRUE)
+  })
+
+  # Create border line
+  border <- create_table_border(col_widths)
+
+  # Print header
+  cat("\n")
+  cat(paste(rep("-", 80), collapse = ""))
+  cat("\n")
+  cat(rep(" ", 30), "CAREER PATHS 2025", sep = "")
+  cat("\n")
+  cat(paste(rep("-", 80), collapse = ""))
+  cat("\n")
+
+  # Print table
+  cat(border, "\n")
+  # Print column headers
+  cat("|")
+  for (i in 1:length(names(df))) {
+    cat(paste(names(df)[i], width = col_widths[i], right = TRUE, pad = " "))
+    if (i < length(names(df))) {
+      cat("|")
+    }
+  }
+  cat("\n")
+
+  # Print separator after headers
+  cat(border, "\n")
+
+  # Print data rows
+  for (i in 1:nrow(df)) {
+    cat("|")
+    for (j in 1:length(names(df))) {
+      cat(paste(as.character(df[i, j]), width = col_widths[j], right = TRUE, pad = " "))
+      if (j < length(names(df))) {
+        cat("|")
+      }
+    }
+    cat("\n")
+  }
+
+  # Print bottom border
+  cat(border, "\n")
+  cat(paste(rep("-", 80), collapse = ""))
+  cat("\n")
 }
 
 # User Interface
@@ -696,6 +759,11 @@ server <- function(input, output, session) {
     req(predicted_career_paths())
     
     df <- data.frame(Career_Path = unlist(strsplit(paste(predicted_career_paths(), collapse = "   "), ",")), stringsAsFactors = FALSE)  # Collapse career paths with spaces
+    
+    # Clean the text
+    df$Career_Path <- sapply(df$Career_Path, clean_text)
+    
+    print_formatted_table(df)  # Cleaned table display
     datatable(df, options = list(pageLength = 5, autoWidth = TRUE, 
                                   dom = 't', 
                                   columnDefs = list(list(className = 'dt-left', targets = 0))), 
