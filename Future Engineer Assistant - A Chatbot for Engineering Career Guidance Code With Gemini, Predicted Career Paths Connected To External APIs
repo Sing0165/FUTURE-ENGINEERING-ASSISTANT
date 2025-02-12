@@ -136,8 +136,8 @@ ui <- fluidPage(
       height: 100%;
     }
     .centered-congratulation { text-align: center; font-size: 28px; }
-    .career-path { margin-bottom: 10px; font-size: 20px; }
-    .split-table { display: flex; justify-content: center; margin: 20px 0; }
+    .career-path { margin-bottom: 10px; font-size: 30px; }
+    .split-table { display: flex; justify-content: center; margin: 30px 0; }
     .split-table > div { flex: 1; text-align: center; }
   ")),
 
