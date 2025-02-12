@@ -119,26 +119,22 @@ ui <- fluidPage(
     .sticky-title { position: sticky; top: 0; background-color: #841617; color: white; padding: 10px; }
     .completion-box { border: 2px solid #841617; border-radius: 15px; padding: 20px; background-color: rgba(255, 255, 255, 0.9); text-align: center; margin-top: 20px; }
     .important-link { font-size: 18px; font-weight: bold; color: #007bff; text-align: center; margin-top: 10px; }
-
     .chat-container {
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
       height: 400px;
     }
-
     .chat-input {
       flex: 1;
       margin-right: 20px; 
       height: 100%;
     }
-
     .chat-responses {
       flex: 1;
       margin-left: 20px; 
       height: 100%;
     }
-
     .centered-congratulation { text-align: center; font-size: 28px; }
     .career-path { margin-bottom: 10px; font-size: 20px; } /* Increased font size for career paths */
     .split-table { display: flex; justify-content: center; margin: 20px 0; }
@@ -357,9 +353,24 @@ ui <- fluidPage(
                                       ),
                                       actionButton("loadingResponse", "Waiting for Response...", loading = TRUE, style = "display: none;"),
                                       downloadButton("downloadChatbotResponses", "Download Chatbot Responses CSV", class = "btn-primary"),
-                                      actionButton("nextToSalaryPage", "Next to Salary Insights", class = "btn-primary")
+                                      actionButton("nextToSalaryInstructions", "Next to Salary Instructions", class = "btn-primary")
                              )
                            )
+                         )
+                ),
+
+                tabPanel("Salary Instructions",
+                         fluidPage(
+                           titlePanel(tags$div(class = "bubble-title", "Salary Instructions")),
+                           tags$div(style = "margin-bottom: 20px;",
+                                    h4("Learn About Salary Predictions!"),
+                                    tags$div(class = "rect-bubble", 
+                                             p("In this section, you will be able to utilize the drop-down menu and learn how much your personalized predicted career paths make annually. By selecting from the list of careers, you can easily find the average salary that aligns with your professional interests."),
+                                             p("You can ask any of those career paths and see how much they earn at a variety of experience levels. Having an understanding of potential earnings can significantly aid your career planning process, equipping you with the knowledge needed for successful negotiations and informed decisions."),
+                                             p("With the flexibility to modify experience levels, users can analyze potential salary progression and compare different career paths to determine which offers the best long-term financial stability. This ensures a tailored and data-driven approach to career decision-making, enabling users to make well-informed choices about their future. By integrating salary predictions with career recommendations, the tool creates a seamless and personalized experience that guides users toward financially rewarding career trajectories.")
+                                    )
+                           ),
+                           actionButton("nextToSalaryPage", "Next to Salary Prediction Page", class = "btn-primary")
                          )
                 ),
 
@@ -798,6 +809,10 @@ server <- function(input, output, session) {
 
   observeEvent(input$nextToGeminiChatbot, {
     updateTabsetPanel(session, "tabs", selected = "Ask Question Gemini Chatbot");
+  })
+
+  observeEvent(input$nextToSalaryInstructions, {
+    updateTabsetPanel(session, "tabs", selected = "Salary Instructions");
   })
 
   observeEvent(input$nextToSalaryPage, {
