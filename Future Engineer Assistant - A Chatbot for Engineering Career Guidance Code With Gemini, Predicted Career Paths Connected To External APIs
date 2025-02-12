@@ -87,7 +87,6 @@ isCareerRelated <- function(input_text, api_key) {
 
 # Functions to clean text and format tables
 clean_text <- function(text) {
-  # Remove markdown formatting and numbers
   text <- gsub("\\*\\*+", "", text)
   text <- gsub("^\\d+\\.\\s*", "", text)
   return(trimws(text))
@@ -106,8 +105,8 @@ ui <- fluidPage(
     .btn:hover { background-color: #6f1417; }
     .footer { text-align: center; padding: 20px; color: #ffffff; }
     .welcome-box, .registration-box, .header-box, .chat-box, .pink-box { background-color: rgba(255, 255, 255, 0.9); border-radius: 15px; padding: 30px; box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3); margin-bottom: 20px; }
-    .chat-box { max-height: 300px; overflow-y: auto; }
-    .chat-history { max-height: 400px; overflow-y: auto; background-color: #e8e8e8; padding: 15px; border-radius: 10px; margin-top: 10px; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); }
+    .chat-box { height: 400px; overflow-y: auto; }
+    .chat-history { height: 100%; background-color: #e8e8e8; padding: 15px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); reverse-rows: true; }
     .bubble-title { text-align: center; background-color: #841617; color: #ffffff; border-radius: 25px; padding: 10px 20px; font-size: 24px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3); }
     .rect-bubble { background-color: #f9c74f; border-radius: 10px; padding: 15px; margin: 10px 0; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); }
     .table { margin-top: 20px; }
@@ -310,11 +309,11 @@ ui <- fluidPage(
                            tags$div(class = "completion-box", style = "text-align: left;",
                                     h2("Please Complete Post Survey"),
                                     p("Thank you for taking the time to participate in this survey. Your involvement is crucial for the success of our research study. The data you provide will be utilized for both the pilot testing and final results, helping us evaluate the effectiveness of the AI-guided platform. Your responses will directly inform how the platform is designed to assist undergraduate engineering students in selecting their majors. We deeply appreciate the valuable insights you are contributing to this project.
-
+                                    
                                     As a participant, your feedback will help us understand how students perceive and interact with AI when making academic decisions. We are committed to using the information gathered to refine the platform and ensure it meets the needs of students across various engineering disciplines. Your input is essential for enhancing the functionality and user experience of the system.
-
+                                    
                                     Once you complete the survey, you will be directed to the chatbot section, where you can engage with the AI tool. This section will give you the opportunity to interact with the platform firsthand and explore how it can assist with career and major decisions. Your experience with the chatbot will help us assess its performance and make necessary improvements before the final implementation.
-
+                                    
                                     We truly appreciate your time and effort in contributing to this research. Your participation will make a significant impact on the future development of the AI-guided platform. Should you have any questions or concerns during or after completing the survey, please don't hesitate to reach out to Dr. Javeed Kittur at jkittur@ou.edu. Thank you again for being a part of this important study."),
                                     tags$a(href = "https://ousurvey.qualtrics.com/jfe/form/SV_3n3jlqsnkoMkn0W", target = "_blank", 
                                             class = "important-link", "Click here to complete the Post Survey"),
@@ -789,8 +788,9 @@ server <- function(input, output, session) {
   });
 
   output$chatOutputResponses <- renderDT({
-    chatbot_responses()
-  }, options = list(pageLength = 5, autoWidth = TRUE));
+    # Render chat history in reverse order
+    datatable(chatbot_responses()[nrow(chatbot_responses()):1, ], options = list(pageLength = 5, autoWidth = TRUE))
+  });
 
   observeEvent(input$nextToWelcomeChatbot, {
     updateTabsetPanel(session, "tabs", selected = "Welcome to Chatbot");
