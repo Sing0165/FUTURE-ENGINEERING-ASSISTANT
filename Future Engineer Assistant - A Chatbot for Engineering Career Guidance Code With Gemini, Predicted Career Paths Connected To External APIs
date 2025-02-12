@@ -37,7 +37,7 @@ predictCareerPaths <- function(answers, api_key) {
   if (length(answers) == 0) {
     return(NULL)
   }
-  
+
   prompt <- paste("Based on the following user responses, please suggest 5 very specific career paths for an engineering student.", paste(answers, collapse = " "))
   response <- generateContent(prompt, api_key)
   return(unlist(strsplit(response, ",")))
@@ -362,6 +362,8 @@ ui <- fluidPage(
                          fluidPage(
                            titlePanel(tags$div(class = "bubble-title", "Salary Instructions")),
                            tags$div(style = "margin-bottom: 20px;",
+                                    tags$div(style = "float:left; margin-right: 10px;",
+                                             img(src = "https://png.pngtree.com/png-clipart/20230813/original/pngtree-money-salary-loan-budget-vector-picture-image_10526511.png", height = "50px", align = "center")),
                                     tags$div(class = "rect-bubble", 
                                              p("In this section, you will be able to utilize the drop-down menu and learn how much your personalized predicted career paths make annually. By selecting from the list of careers, you can easily find the average salary that aligns with your professional interests."),
                                              p("You can ask any of those career paths and see how much they earn at a variety of experience levels. Having an understanding of potential earnings can significantly aid your career planning process, equipping you with the knowledge needed for successful negotiations and informed decisions."),
@@ -371,7 +373,6 @@ ui <- fluidPage(
                            actionButton("nextToSalaryPage", "Next to Salary Prediction Page", class = "btn-primary")
                          )
                 ),
-
                 tabPanel("Salary Prediction",
                          sidebarLayout(
                            sidebarPanel(
