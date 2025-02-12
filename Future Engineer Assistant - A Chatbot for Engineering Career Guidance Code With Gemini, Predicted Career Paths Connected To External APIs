@@ -373,6 +373,7 @@ ui <- fluidPage(
                            actionButton("nextToSalaryPage", "Next to Salary Prediction Page", class = "btn-primary")
                          )
                 ),
+
                 tabPanel("Salary Prediction",
                          sidebarLayout(
                            sidebarPanel(
@@ -1035,7 +1036,7 @@ server <- function(input, output, session) {
 
     # Create nodes and edges
     nodes <- data.frame(id = 1:length(career_steps), label = career_steps, stringsAsFactors = FALSE)
-    edges <- data.frame(from = c(rep(1, length(career_steps)-1)), to = 2:length(career_steps))
+    edges <- data.frame(from = c(rep(1, length(career_steps) - 1)), to = 2:length(career_steps))
 
     visNetwork(nodes, edges) %>%
       visNodes(shape = "box") %>%
