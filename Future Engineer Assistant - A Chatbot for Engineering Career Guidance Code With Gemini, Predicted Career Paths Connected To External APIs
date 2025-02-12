@@ -140,6 +140,7 @@ ui <- fluidPage(
     .career-path { margin-bottom: 10px; font-size: 30px; }
     .split-table { display: flex; justify-content: center; margin: 30px 0; }
     .split-table > div { flex: 1; text-align: center; }
+    .response-bubble { margin-bottom: 15px; } /* Added spacing for chatbot responses */
   ")),
 
   # Title Section
@@ -364,7 +365,7 @@ ui <- fluidPage(
                            titlePanel(tags$div(class = "bubble-title", "Salary Instructions")),
                            tags$div(style = "margin-bottom: 20px;",
                                     tags$div(style = "float:left; margin-right: 10px;",
-                                             img(src = "https://png.pngtree.com/png-clipart/20230813/original/pngtree-money-salary-loan-budget-vector-picture-image_10526511.png", height = "50px", align = "center")),
+                                             img(src = "https://png.pngtree.com/png-clipart/20230813/original/pngtree-money-salary-loan-budget-vector-picture-image_10526511.png", height = "70px", align = "center")),  # Increased height to 70px
                                     tags$div(class = "rect-bubble", 
                                              p("In this section, you will be able to utilize the drop-down menu and learn how much your personalized predicted career paths make annually. By selecting from the list of careers, you can easily find the average salary that aligns with your professional interests."),
                                              p("You can ask any of those career paths and see how much they earn at a variety of experience levels. Having an understanding of potential earnings can significantly aid your career planning process, equipping you with the knowledge needed for successful negotiations and informed decisions."),
@@ -800,8 +801,12 @@ server <- function(input, output, session) {
   });
 
   output$chatOutputResponses <- renderDT({
-    # Render chat history in reverse order
-    datatable(chatbot_responses()[nrow(chatbot_responses()):1, ], options = list(pageLength = 5, autoWidth = TRUE))
+    # Render chat history in reverse order with spacing adjustments
+    datatable(chatbot_responses()[nrow(chatbot_responses()):1, ], options = list(pageLength = 5, autoWidth = TRUE)) %>%
+                formatStyle(
+                  'Response',
+                  'margin-bottom' = '10px'  # Spacing adjustments for better readability
+                )
   });
 
   observeEvent(input$nextToWelcomeChatbot, {
