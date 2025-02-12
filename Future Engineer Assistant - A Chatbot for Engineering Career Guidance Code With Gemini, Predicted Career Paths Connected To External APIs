@@ -108,7 +108,7 @@ ui <- fluidPage(
     .chat-box { height: 400px; overflow-y: auto; }
     .chat-history { height: 100%; background-color: #e8e8e8; padding: 15px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); reverse-rows: true; }
     .bubble-title { text-align: center; background-color: #841617; color: #ffffff; border-radius: 25px; padding: 10px 20px; font-size: 24px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3); }
-    .rect-bubble { background-color: #f9c74f; border-radius: 10px; padding: 15px; margin: 10px 0; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); }
+    .rect-bubble { background-color: #e8e8e8; border-radius: 10px; padding: 15px; margin: 10px 0; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); }
     .table { margin-top: 20px; }
     .progress-box { background-color: #f1f1f1; padding: 15px; border-radius: 10px; margin-bottom: 15px; text-align: center; }
     .scrollable { overflow-y: auto; max-height: 500px; }
@@ -136,7 +136,7 @@ ui <- fluidPage(
       height: 100%;
     }
     .centered-congratulation { text-align: center; font-size: 28px; }
-    .career-path { margin-bottom: 10px; font-size: 20px; } /* Increased font size for career paths */
+    .career-path { margin-bottom: 10px; font-size: 20px; }
     .split-table { display: flex; justify-content: center; margin: 20px 0; }
     .split-table > div { flex: 1; text-align: center; }
   ")),
@@ -240,7 +240,6 @@ ui <- fluidPage(
                            titlePanel(tags$div(class = "header-box", "Introduction")),
                            tags$div(class = "welcome-box",
                                     img(src = "welcome_image.png", height = "200px", align = "center"), 
-                                    h3("Introduction"),
                                     p("Welcome to the Future Engineer Assistant (FEA) app, a dynamic and interactive platform designed specifically for engineering students navigating the complexities of career selection. As you journey through the application, you'll encounter tailored questionnaires, insightful recommendations, and interactive visualizations that empower you to make informed decisions about your future. Dive in and let us help you shape your future!"),
                                     tags$div(class = "instructions-box",
                                              h3("Instructions:"),
@@ -363,7 +362,6 @@ ui <- fluidPage(
                          fluidPage(
                            titlePanel(tags$div(class = "bubble-title", "Salary Instructions")),
                            tags$div(style = "margin-bottom: 20px;",
-                                    h4("Learn About Salary Predictions!"),
                                     tags$div(class = "rect-bubble", 
                                              p("In this section, you will be able to utilize the drop-down menu and learn how much your personalized predicted career paths make annually. By selecting from the list of careers, you can easily find the average salary that aligns with your professional interests."),
                                              p("You can ask any of those career paths and see how much they earn at a variety of experience levels. Having an understanding of potential earnings can significantly aid your career planning process, equipping you with the knowledge needed for successful negotiations and informed decisions."),
@@ -530,7 +528,7 @@ server <- function(input, output, session) {
  
   output$preSurveyCompleted <- reactive({ preSurveyCompleted() })
   outputOptions(output, "preSurveyCompleted", suspendWhenHidden = FALSE)
- 
+
   observeEvent(input$confirmSurveyBtn, {
     if (input$preSurveyCheck) {
       preSurveyCompleted(TRUE)
