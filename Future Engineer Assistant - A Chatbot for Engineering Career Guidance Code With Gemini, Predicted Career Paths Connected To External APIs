@@ -102,23 +102,23 @@ ui <- fluidPage(
     .navbar a { color: #333333 !important; }
     .container { background-color: rgba(255, 255, 255, 0.9); border-radius: 10px; padding: 25px; box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3); color: #343a40; }
     h1, h3, h4 { color: #000000; text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3); font-size: 22px; }
-    .btn { width: auto; margin: 10px 0; font-size: 16px; border-radius: 25px; background-color: #841617; color: #ffffff; border: none; padding: 10px; transition: background 0.3s ease; }
+    .btn { width: auto; margin: 10px 0; font-size: 16px; border-radius: 25px; background-color: #6E213D; color: #ffffff; border: none; padding: 10px; transition: background 0.3s ease; }
     .btn:hover { background-color: #F5E1DA; }
     .footer { text-align: center; padding: 20px; color: #ffffff; }
     .welcome-box, .registration-box, .header-box, .chat-box, .pink-box { background-color: rgba(255, 255, 255, 0.9); border-radius: 15px; padding: 30px; box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3); margin-bottom: 20px; }
     .chat-box { height: 400px; overflow-y: auto; }
-    .chat-history { height: 100%; background-color: #F5F5DC; padding: 15px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); reverse-rows: true; }
-    .bubble-title { text-align: center; background-color: #841617; color: #ffffff; border-radius: 25px; padding: 10px 20px; font-size: 24px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3); }
+    .chat-history { height: 100%; background-color: #EDE7F6; padding: 15px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); reverse-rows: true; }
+    .bubble-title { text-align: center; background-color: #6E213D; color: #ffffff; border-radius: 25px; padding: 10px 20px; font-size: 24px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3); }
     .rect-bubble { background-color: #e8e8e8; border-radius: 10px; padding: 15px; margin: 10px 0; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); }
     .table { margin-top: 20px; }
     .progress-box { background-color: #f1f1f1; padding: 15px; border-radius: 10px; margin-bottom: 15px; text-align: center; }
     .scrollable { overflow-y: auto; max-height: 500px; }
     .color-bubble { background-color: #e2e2e2; border-radius: 10px; padding: 15px; margin: 10px 0; position: relative; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); }
-    .welcome-message { font-size: 24px; text-align: center; margin: 20px 0; padding: 20px; border: 1px solid #841617; border-radius: 15px; background-color: rgba(255, 255, 255, 0.9); }
+    .welcome-message { font-size: 24px; text-align: center; margin: 20px 0; padding: 20px; border: 1px solid #6E213D; border-radius: 15px; background-color: rgba(255, 255, 255, 0.9); }
     .instructions-box { padding: 20px; border-radius: 15px; background-color: rgba(255, 255, 255, 0.8); margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); }
-    .step-box { padding: 15px; border: 2px solid #841617; border-radius: 15px; background-color: rgba(255, 255, 255, 0.9); margin-bottom: 20px; }
-    .sticky-title { position: sticky; top: 0; background-color: #841617; color: white; padding: 10px; }
-    .completion-box { border: 2px solid #841617; border-radius: 15px; padding: 20px; background-color: rgba(255, 255, 255, 0.9); text-align: center; margin-top: 20px; }
+    .step-box { padding: 15px; border: 2px solid #6E213D; border-radius: 15px; background-color: rgba(255, 255, 255, 0.9); margin-bottom: 20px; }
+    .sticky-title { position: sticky; top: 0; background-color: #6E213D; color: white; padding: 10px; }
+    .completion-box { border: 2px solid #6E213D; border-radius: 15px; padding: 20px; background-color: rgba(255, 255, 255, 0.9); text-align: center; margin-top: 20px; }
     .important-link { font-size: 18px; font-weight: bold; color: #007bff; text-align: center; margin-top: 10px; }
     .chat-container {
       display: flex;
@@ -420,7 +420,7 @@ ui <- fluidPage(
                                     h2("Session Completed"),
                                     p("The session has been completed!"),
                                     p("Thank you for completing your session with FSA. As a final step, feedback is appreciated through a brief survey."),
-                                    a(href = "https://ousurvey.qualtrics.com/jfe/form/SV_3n3jlqsnkoMkn0W", target = "_blank", "Click here to take the survey:", style = "font-weight: bold; color: #841617; text-decoration: underline;")
+                                    a(href = "https://ousurvey.qualtrics.com/jfe/form/SV_3n3jlqsnkoMkn0W", target = "_blank", "Click here to take the survey:", style = "font-weight: bold; color: #6E213D; text-decoration: underline;")
                            )
                          )
                 ),
@@ -1056,3 +1056,5 @@ server <- function(input, output, session) {
 }
 
 shinyApp(ui = ui, server = server)
+
+
