@@ -97,7 +97,7 @@ clean_text <- function(text) {
 ui <- fluidPage(
   useShinyjs(),
   tags$style(HTML("
-    body { background-color: #b04a5e; font-family: 'Times New Roman', serif; color: #333333; font-size: 18px; }
+    body { background-color: #ffcccb; font-family: 'Times New Roman', serif; color: #333333; font-size: 18px; }
     .navbar { background-color: #ffffff; }
     .navbar a { color: #333333 !important; }
     .container { background-color: rgba(255, 255, 255, 0.9); border-radius: 10px; padding: 25px; box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3); color: #343a40; }
@@ -718,7 +718,6 @@ server <- function(input, output, session) {
 
     df$Career_Path <- sapply(df$Career_Path, clean_text)
 
-    # Use styled output for font size
     styled_output <- paste("<span style='font-size:20px;'>", df$Career_Path, "</span>", collapse = "<br>")
     HTML(styled_output)
   })
@@ -801,11 +800,10 @@ server <- function(input, output, session) {
   });
 
   output$chatOutputResponses <- renderDT({
-    # Render chat history in reverse order with spacing adjustments
     datatable(chatbot_responses()[nrow(chatbot_responses()):1, ], options = list(pageLength = 5, autoWidth = TRUE)) %>%
                 formatStyle(
                   'Response',
-                  'margin-bottom' = '10px'  # Spacing adjustments for better readability
+                  'margin-bottom' = '10px'
                 )
   });
 
