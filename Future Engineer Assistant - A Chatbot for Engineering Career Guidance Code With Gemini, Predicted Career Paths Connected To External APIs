@@ -109,7 +109,7 @@ ui <- fluidPage(
     .chat-box { height: 400px; overflow-y: auto; }
     .chat-history { height: 100%; background-color: #EDE7F6; padding: 15px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); reverse-rows: true; }
     .bubble-title { text-align: center; background-color: #6E213D; color: #ffffff; border-radius: 25px; padding: 10px 20px; font-size: 24px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3); }
-    .rect-bubble { background-color: #FADADD; border-radius: 10px; padding: 15px; margin: 10px 0; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); }
+    .rect-bubble { background-color: #F7E7CE; border-radius: 10px; padding: 15px; margin: 10px 0; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); }
     .table { margin-top: 20px; }
     .progress-box { background-color: #f1f1f1; padding: 15px; border-radius: 10px; margin-bottom: 15px; text-align: center; }
     .scrollable { overflow-y: auto; max-height: 500px; }
@@ -1056,6 +1056,7 @@ server <- function(input, output, session) {
 }
 
 shinyApp(ui = ui, server = server)
+
 
 
 
