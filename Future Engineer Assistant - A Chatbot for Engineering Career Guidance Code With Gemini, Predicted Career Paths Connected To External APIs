@@ -289,7 +289,7 @@ ui <- fluidPage(
 
                 tabPanel("Quick Glimpse",
                          fluidPage(
-                           tags$div(class = "completion-box",
+tags$div(class = "completion-box", style = "background-color: #E6E6FA;", # Lavender color
                                     h2("Quick Glimpse"),
                                     p("Based on the options selected, a personalized summary of preferences and interests has been created. It appears that the choices align with the following themes:"),
                                     tags$div(class = "split-table",
@@ -1056,4 +1056,5 @@ server <- function(input, output, session) {
 }
 
 shinyApp(ui = ui, server = server)
+
 
