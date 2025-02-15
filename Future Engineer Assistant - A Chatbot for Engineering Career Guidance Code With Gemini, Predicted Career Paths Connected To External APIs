@@ -8,6 +8,7 @@ library(shinyjs)
 library(digest)
 library(lubridate)
 library(visNetwork)
+library(stringr)
 
 # Functions for content generation and career path prediction
 getCareerPathSteps <- function(career_path, api_key) {
@@ -128,12 +129,12 @@ ui <- fluidPage(
     }
     .chat-input {
       flex: 1;
-      margin-right: 20px; 
+      margin-right: 20px;
       height: 100%;
     }
     .chat-responses {
       flex: 1;
-      margin-left: 20px; 
+      margin-left: 20px;
       height: 100%;
     }
     .centered-congratulation { text-align: center; font-size: 28px; }
@@ -145,7 +146,7 @@ ui <- fluidPage(
 
   # Title Section
   tags$div(class = "bubble-title", "Future Engineer Assistant"),
-  tags$div(img(src = "cute_robot_logo.png", height = "100px", align = "center")),
+  #tags$div(img(src = "cute_robot_logo.png", height = "100px", align = "center")),
 
   # Login Section
   conditionalPanel(
@@ -241,7 +242,7 @@ ui <- fluidPage(
                          fluidPage(
                            titlePanel(tags$div(class = "header-box", "Introduction")),
                            tags$div(class = "welcome-box",
-                                    img(src = "welcome_image.png", height = "200px", align = "center"), 
+                                    img(src = "welcome_image.png", height = "200px", align = "center"),
                                     p("Welcome to the Future Engineer Assistant (FEA) app, a dynamic and interactive platform designed specifically for engineering students navigating the complexities of career selection. As you journey through the application, you'll encounter tailored questionnaires, insightful recommendations, and interactive visualizations that empower you to make informed decisions about your future. Dive in and let us help you shape your future!"),
                                     tags$div(class = "instructions-box",
                                              h3("Instructions:"),
@@ -273,15 +274,15 @@ ui <- fluidPage(
                              tags$div(class = "pink-box",
                                       tags$h4("Chatbot Questions"),
                                       div(class = "chat-history",
-                                          uiOutput("currentQuestion")  
+                                          uiOutput("currentQuestion")
                                       ),
                                       tags$hr(),
-                                      textAreaInput("chatbotAnswerInput", "Your Answer", placeholder = "Type your answer here...", rows = 4),  
+                                      textAreaInput("chatbotAnswerInput", "Your Answer", placeholder = "Type your answer here...", rows = 4),
                                       actionButton("submitAnswerBtn", "Submit Answer", class = "btn-primary"),
                                       tags$hr(),
                                       uiOutput("predictedCareerPaths"),
-                                      uiOutput("errorMessage"),  
-                                      tags$div(id = "wordCountWarning", class = "text-danger") 
+                                      uiOutput("errorMessage"),
+                                      tags$div(id = "wordCountWarning", class = "text-danger")
                              )
                            )
                          )
@@ -289,14 +290,14 @@ ui <- fluidPage(
 
                 tabPanel("Quick Glimpse",
                          fluidPage(
-tags$div(class = "completion-box", style = "background-color: #E6E6FA;", # Lavender color
+                           tags$div(class = "completion-box", style = "background-color: #E6E6FA;", # Lavender color
                                     h2("Quick Glimpse"),
                                     p("Based on the options selected, a personalized summary of preferences and interests has been created. It appears that the choices align with the following themes:"),
                                     tags$div(class = "split-table",
-                                             verbatimTextOutput("predictedCareerPathsTableOutput") 
+                                             verbatimTextOutput("predictedCareerPathsTableOutput")
                                     ),
                                     downloadButton("downloadCareerPaths", "Download Predicted Career Paths CSV", class = "btn-primary"),
-                                    actionButton("nextToPostSurvey", "Next to Post Survey", class = "btn-primary")  
+                                    actionButton("nextToPostSurvey", "Next to Post Survey", class = "btn-primary")
                            )
                          )
                 ),
@@ -306,15 +307,15 @@ tags$div(class = "completion-box", style = "background-color: #E6E6FA;", # Laven
                            tags$div(class = "completion-box", style = "text-align: left;",
                                     h2("Please Complete Post Survey"),
                                     p("Thank you for taking the time to participate in this survey. Your involvement is crucial for the success of our research study. The data you provide will be utilized for both the pilot testing and final results, helping us evaluate the effectiveness of the AI-guided platform. Your responses will directly inform how the platform is designed to assist undergraduate engineering students in selecting their majors. We deeply appreciate the valuable insights you are contributing to this project.
-                                    
+
                                     As a participant, your feedback will help us understand how students perceive and interact with AI when making academic decisions. We are committed to using the information gathered to refine the platform and ensure it meets the needs of students across various engineering disciplines. Your input is essential for enhancing the functionality and user experience of the system.
-                                    
+
                                     Once you complete the survey, you will be directed to the chatbot section, where you can engage with the AI tool. This section will give you the opportunity to interact with the platform firsthand and explore how it can assist with career and major decisions. Your experience with the chatbot will help us assess its performance and make necessary improvements before the final implementation.
-                                    
+
                                     We truly appreciate your time and effort in contributing to this research. Your participation will make a significant impact on the future development of the AI-guided platform. Should you have any questions or concerns during or after completing the survey, please don't hesitate to reach out to Dr. Javeed Kittur at jkittur@ou.edu. Thank you again for being a part of this important study."),
-                                    tags$a(href = "https://ousurvey.qualtrics.com/jfe/form/SV_3n3jlqsnkoMkn0W", target = "_blank", 
+                                    tags$a(href = "https://ousurvey.qualtrics.com/jfe/form/SV_3n3jlqsnkoMkn0W", target = "_blank",
                                             class = "important-link", "Click here to complete the Post Survey"),
-                                    actionButton("nextToWelcomeChatbot", "Next to Welcome Chatbot", class = "btn-primary")  
+                                    actionButton("nextToWelcomeChatbot", "Next to Welcome Chatbot", class = "btn-primary")
                            )
                          )
                 ),
@@ -366,7 +367,7 @@ tags$div(class = "completion-box", style = "background-color: #E6E6FA;", # Laven
                            tags$div(style = "margin-bottom: 20px;",
                                     tags$div(style = "float:left; margin-right: 10px;",
                                              img(src = "https://png.pngtree.com/png-clipart/20230813/original/pngtree-money-salary-loan-budget-vector-picture-image_10526511.png", height = "70px", align = "center")),  # Increased height to 70px
-                                    tags$div(class = "rect-bubble", 
+                                    tags$div(class = "rect-bubble",
                                              p("In this section, you will be able to utilize the drop-down menu and learn how much your personalized predicted career paths make annually. By selecting from the list of careers, you can easily find the average salary that aligns with your professional interests."),
                                              p("You can ask any of those career paths and see how much they earn at a variety of experience levels. Having an understanding of potential earnings can significantly aid your career planning process, equipping you with the knowledge needed for successful negotiations and informed decisions."),
                                              p("With the flexibility to modify experience levels, users can analyze potential salary progression and compare different career paths to determine which offers the best long-term financial stability. This ensures a tailored and data-driven approach to career decision-making, enabling users to make well-informed choices about their future. By integrating salary predictions with career recommendations, the tool creates a seamless and personalized experience that guides users toward financially rewarding career trajectories.")
@@ -384,7 +385,7 @@ tags$div(class = "completion-box", style = "background-color: #E6E6FA;", # Laven
                              tags$p("2. Provide this information to receive salary insights based on the latest industry standards."),
                              tags$p("3. Note the provided salary insights for future job negotiations."),
                              tags$hr(),
-                             selectInput("job_title", "Select Job Title *", choices = NULL),  
+                             selectInput("job_title", "Select Job Title *", choices = NULL),
                              selectInput("experience", "Select Experience Level *", choices = c("Entry Level", "Mid Level", "Senior Level")),
                              actionButton("askSalaryQuestions", "Get Salary Information", class = "btn-primary")
                            ),
@@ -395,7 +396,7 @@ tags$div(class = "completion-box", style = "background-color: #E6E6FA;", # Laven
                                       actionButton("loadingSalaryResponse", "Waiting for Response...", loading = TRUE, style = "display: none;"),
                                       plotlyOutput("salary_histogram"),
                                       plotlyOutput("salary_boxplot"),
-                                      actionButton("nextToEndSession", "Next to End Session", class = "btn-primary")  
+                                      actionButton("nextToEndSession", "Next to End Session", class = "btn-primary")
                              )
                            )
                          )
@@ -414,7 +415,7 @@ tags$div(class = "completion-box", style = "background-color: #E6E6FA;", # Laven
                          )
                 ),
 
-                tabPanel("Session Completed",  
+                tabPanel("Session Completed",
                          fluidPage(
                            tags$div(class = "completion-box",
                                     h2("Session Completed"),
@@ -445,7 +446,7 @@ server <- function(input, output, session) {
   preSurveyCompleted <- reactiveVal(FALSE)
   salary_responses <- reactiveVal(data.frame(Job_Title = character(), Experience_Level = character(), Response = character(), stringsAsFactors = FALSE))
   current_question_index <- reactiveVal(1)
-  randomized_questions <- reactiveVal()  
+  randomized_questions <- reactiveVal()
   chatbot_responses <- reactiveVal(data.frame(Question = character(), Response = character(), stringsAsFactors = FALSE))
 
   user_details <- loadUserData()
@@ -481,7 +482,7 @@ server <- function(input, output, session) {
                      "Gender Identity", "Terms and Conditions")
 
     empty_fields <- field_names[sapply(required_fields, function(x) is.na(x) || x == "")]
-   
+
     if (length(empty_fields) > 0) {
       showModal(modalDialog(
         title = "Registration Warning",
@@ -493,10 +494,10 @@ server <- function(input, output, session) {
     } else {
       if (input$terms) {
         if (input$reg_password == input$reg_password_reenter) {
-          hashed_password <- digest(input$reg_password, algo = "sha256")  
+          hashed_password <- digest(input$reg_password, algo = "sha256")
           new_user <- data.frame(Username = input$username, Password = hashed_password, stringsAsFactors = FALSE)
-          user_details <<- rbind(user_details, new_user)  
-          saveUserData(user_details)  
+          user_details <<- rbind(user_details, new_user)
+          saveUserData(user_details)
           registered(TRUE)
           shinyjs::enable("nextBtnReg")
           showModal(modalDialog(
@@ -523,30 +524,30 @@ server <- function(input, output, session) {
       }
     }
   })
- 
+
   output$registered <- reactive({ registered() })
   outputOptions(output, "registered", suspendWhenHidden = FALSE)
- 
+
   output$loggedIn <- reactive({ loggedIn() })
   outputOptions(output, "loggedIn", suspendWhenHidden = FALSE)
- 
+
   output$preSurveyCompleted <- reactive({ preSurveyCompleted() })
   outputOptions(output, "preSurveyCompleted", suspendWhenHidden = FALSE)
 
   observeEvent(input$confirmSurveyBtn, {
     if (input$preSurveyCheck) {
       preSurveyCompleted(TRUE)
-      tabs_access(c(TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE))  
+      tabs_access(c(TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE))
     }
   })
- 
+
   observeEvent(input$continueToQuestionnaire, {
-    tabs_access(c(TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE))  
+    tabs_access(c(TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE))
     updateTabsetPanel(session, "tabs", selected = "Questionnaire")
   })
- 
+
   observeEvent(input$loginBtn, {
-    req(input$login_username, input$login_password)
+        req(input$login_username, input$login_password)
     user <- user_details
     if (nrow(user) > 0) {
       showModal(modalDialog(
@@ -555,12 +556,12 @@ server <- function(input, output, session) {
         easyClose = TRUE,
         footer = NULL
       ))
-      Sys.sleep(2)  
-      hashed_login_password <- digest(input$login_password, algo = "sha256")  
+      Sys.sleep(2)
+      hashed_login_password <- digest(input$login_password, algo = "sha256")
       if (any(user$Username == input$login_username & user$Password == hashed_login_password)) {
         loggedIn(TRUE)
         resetChat()
-        tabs_access(c(TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE))  
+        tabs_access(c(TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE))
       } else {
         showModal(modalDialog(
           title = "Login Error",
@@ -578,12 +579,12 @@ server <- function(input, output, session) {
       ))
     }
   })
- 
+
   observeEvent(input$navigateToRegistration, {
     registered(TRUE)
     loggedIn(FALSE)
   })
- 
+
   observeEvent(input$navigateToLogin, {
     registered(FALSE)
     loggedIn(FALSE)
@@ -594,8 +595,8 @@ server <- function(input, output, session) {
     chat_history(data.frame(Role = character(), Message = character(), stringsAsFactors = FALSE))
     chatbot_responses(data.frame(Question = character(), Response = character(), stringsAsFactors = FALSE))
     recommended_careers(NULL)
-    predicted_career_paths(NULL)  
-    questions <- generateCareerQuestions(api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")  
+    predicted_career_paths(NULL)
+    questions <- generateCareerQuestions(api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")
     randomized_questions(questions)
     askCareerQuestions()
   }
@@ -625,7 +626,7 @@ server <- function(input, output, session) {
         chat_history()$Role[nrow(chat_history())] == "User") {
       last_question <- tail(chat_history()$Message, 1)
       answer_text <- input$chatbotAnswerInput
-      if (!isCareerRelated(answer_text, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")) {  
+      if (!isCareerRelated(answer_text, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")) {
         return(tags$div(class = "rect-bubble",
                         paste("The question asked was not answered:", last_question)))
       }
@@ -662,12 +663,12 @@ server <- function(input, output, session) {
 
     # Check if input is on topic
     if (!checkUserInput(answer_text)) {
-      return()  
+      return()
     }
 
     # Update chat history for user input
     chat_history(rbind(chat_history(), data.frame(Role = "User", Message = answer_text, stringsAsFactors = FALSE)))
-    
+
     # Only call askCareerQuestions if the current index is valid
     if (current_question_index() > 10) {
       showModal(modalDialog(
@@ -679,12 +680,12 @@ server <- function(input, output, session) {
     } else {
       askCareerQuestions()
     }
-    
+
     updateTextAreaInput(session, "chatbotAnswerInput", value = "")
   })
 
   output$questionsProgress <- renderUI({
-    answered <- current_question_index() - 1  
+    answered <- current_question_index() - 1
     total <- length(randomized_questions())
     progress <- round((answered / total) * 100)
 
@@ -704,17 +705,17 @@ server <- function(input, output, session) {
 
   observeEvent(input$nextToGlimpse, {
     user_answers <- unlist(chat_history()[chat_history()$Role == "User", "Message"])
-    predicted_career_paths(predictCareerPaths(user_answers, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ"))  
+    predicted_career_paths(predictCareerPaths(user_answers, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ"))
     user_career_paths(rbind(user_career_paths(), data.frame(Date = Sys.Date(), Career_Path = paste(predicted_career_paths(), collapse = ", "), stringsAsFactors = FALSE)))
 
-    tabs_access(c(TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE))  
+    tabs_access(c(TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE))
     updateTabsetPanel(session, "tabs", selected = "Quick Glimpse")
   })
 
   output$predictedCareerPathsTableOutput <- renderPrint({
     req(predicted_career_paths())
-    
-    df <- data.frame(Career_Path = unlist(strsplit(paste(predicted_career_paths(), collapse = "   "), ",")), stringsAsFactors = FALSE)  
+
+    df <- data.frame(Career_Path = unlist(strsplit(paste(predicted_career_paths(), collapse = "   "), ",")), stringsAsFactors = FALSE)
 
     df$Career_Path <- sapply(df$Career_Path, clean_text)
 
@@ -742,9 +743,9 @@ server <- function(input, output, session) {
   observeEvent(input$askSalaryQuestions, {
     job_title_input <- input$job_title
     experience_level <- input$experience
-   
+
     if (!is.null(job_title_input) && !is.null(experience_level)) {
-      response <- predictSalary(job_title_input, experience_level, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")  
+      response <- predictSalary(job_title_input, experience_level, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")
       salary_responses(rbind(salary_responses(), data.frame(Job_Title = job_title_input, Experience_Level = experience_level, Response = response, stringsAsFactors = FALSE)))
     }
   })
@@ -777,18 +778,18 @@ server <- function(input, output, session) {
 
   observeEvent(input$askQuestionBtn, {
     req(input$userInput)
-   
+
     user_text <- input$userInput
     predicted_paths <- predicted_career_paths()
-    
-    response_data <- connectCareerToChatbot(user_text, predicted_paths, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")  
-    
+
+    response_data <- connectCareerToChatbot(user_text, predicted_paths, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")
+
     chat_history(rbind(chat_history(), data.frame(Role = "User", Message = user_text, stringsAsFactors = FALSE)))
 
     if (!is.null(response_data$warning)) {
       chat_history(rbind(chat_history(), data.frame(Role = "Bot", Message = response_data$warning, stringsAsFactors = FALSE)))
     }
-   
+
     chat_history(rbind(chat_history(), data.frame(Role = "Bot", Message = response_data$response, stringsAsFactors = FALSE)))
     chatbot_responses(rbind(chatbot_responses(), data.frame(Question = user_text, Response = response_data$response, stringsAsFactors = FALSE)))
 
@@ -837,7 +838,7 @@ server <- function(input, output, session) {
     req(user_chat_history())
     datatable(user_chat_history(), options = list(pageLength = 5, autoWidth = TRUE))
   })
-  
+
   output$salaryResponsesHistoryTable <- renderDT({
     req(salary_responses())
     datatable(salary_responses(), options = list(pageLength = 5, autoWidth = TRUE))
@@ -920,7 +921,7 @@ server <- function(input, output, session) {
         "))
       )
     } else {
-      tags$div()  
+      tags$div()
     }
   })
 
@@ -931,7 +932,7 @@ server <- function(input, output, session) {
   observeEvent(input$stopVoiceBtn, {
     session$sendCustomMessage("stopRecognition", list())
   })
- 
+
   observe({
     disable <- !tabs_access()
     for (i in seq_along(disable)) {
@@ -983,7 +984,7 @@ server <- function(input, output, session) {
       footer = modalButton("Close")
     ))
   })
- 
+
   # Terms and Conditions Modal
   observeEvent(input$termsAndConditionsClicked, {
     showModal(modalDialog(
@@ -1036,7 +1037,7 @@ server <- function(input, output, session) {
   output$careerPathNetwork <- renderVisNetwork({
     req(input$selected_career)
     selected_career <- input$selected_career
-    career_steps <- getCareerPathSteps(selected_career, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")  
+    career_steps <- getCareerPathSteps(selected_career, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")
 
     # Create nodes and edges
     nodes <- data.frame(id = 1:length(career_steps), label = career_steps, stringsAsFactors = FALSE)
@@ -1056,5 +1057,4 @@ server <- function(input, output, session) {
 }
 
 shinyApp(ui = ui, server = server)
-
 
