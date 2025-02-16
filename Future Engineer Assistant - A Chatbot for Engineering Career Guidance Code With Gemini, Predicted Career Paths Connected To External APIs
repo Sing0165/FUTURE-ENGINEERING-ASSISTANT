@@ -174,7 +174,6 @@ ui <- fluidPage(
       fluidPage(
         titlePanel(tags$div(class = "header-box", "Registration")),
         tags$div(class = "registration-box",
-                 h3("Register to Access Future Engineer Assistant"),
                  fluidRow(
                    column(4, textInput("first_name", "First Name *", placeholder = "Enter your first name..."),
                           dateInput("dob", "Date of Birth *", format = "mm/dd/yyyy"),
