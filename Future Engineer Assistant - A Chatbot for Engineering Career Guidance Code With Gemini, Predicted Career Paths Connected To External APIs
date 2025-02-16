@@ -297,7 +297,6 @@ ui <- fluidPage(
                          fluidPage(
                            titlePanel(tags$div(class = "header-box", "Quick Glimpse")),
                            tags$div(class = "completion-box", style = "background-color: #E6E6FA;", # Lavender color
-                                    h2("Quick Glimpse"),
                                     p("Based on the options selected, a personalized summary of preferences and interests has been created. It appears that the choices align with the following themes:"),
                                     tags$div(class = "split-table",
                                              verbatimTextOutput("predictedCareerPathsTableOutput")
@@ -332,7 +331,6 @@ ui <- fluidPage(
                            titlePanel(tags$div(class = "header-box", "Welcome to Chatbot")),
                            tags$div(class = "welcome-box",
                                     img(src = "https://png.pngtree.com/png-clipart/20230401/original/pngtree-smart-chatbot-cartoon-clipart-png-image_9015126.png", height = "200px", align = "center"),
-                                    h3("Welcome to Gemini Chatbot"),
                                     p("The Future Engineer Assistant (FEA) is an innovative AI-powered chatbot designed specifically to provide personalized career guidance for engineering students. By leveraging advanced natural language processing (NLP) and generative AI technologies, the FEA engages users in dynamic, interactive conversations that facilitate the exploration of potential career paths. Unlike traditional career counseling methods, which can be limited in personalization and immediacy, the FEA is capable of tailoring its responses based on real-time user inputs. This enables the chatbot to offer customized advice and insights that align more closely with individual interests and academic backgrounds."),
                                     p("At the heart of the FEA's functionality is its ability to generate context-specific questions aimed at uncovering important information about users’ preferences, aspirations, and academic strengths. By employing a generative AI model integrated through an API, the chatbot can produce engaging prompts that encourage students to reflect on their career goals. This dynamic questioning process enhances the depth of information gathered and fosters an interactive environment where students feel comfortable exploring their options."),
                                     actionButton("nextToGeminiChatbot", "Next to Gemini Chatbot", class = "btn-primary")
