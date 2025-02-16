@@ -272,7 +272,7 @@ ui <- fluidPage(
                            ),
                            mainPanel(
                              tags$div(class = "pink-box",
-                                      tags$h4("Chatbot Questions"),
+                                      tags$h4("Personalized Questionare"),
                                       div(class = "chat-history",
                                           uiOutput("currentQuestion")
                                       ),
