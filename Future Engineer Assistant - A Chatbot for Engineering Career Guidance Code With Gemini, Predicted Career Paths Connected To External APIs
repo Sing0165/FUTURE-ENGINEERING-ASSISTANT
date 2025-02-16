@@ -375,7 +375,7 @@ ui <- fluidPage(
 
                 tabPanel("Salary Instructions",
                          fluidPage(
-                           titlePanel(tags$div(class = "bubble-title", "Salary Instructions")),
+                           titlePanel(tags$div(class = "header-box", "Salary Instructions")), # Changed the color here
                            tags$div(style = "margin-bottom: 20px;",
                                     tags$div(style = "float:left; margin-right: 10px;",
                                              img(src = "https://png.pngtree.com/png-clipart/20230813/original/pngtree-money-salary-loan-budget-vector-picture-image_10526511.png", height = "70px", align = "center")),  # Increased height to 70px
@@ -455,7 +455,6 @@ ui <- fluidPage(
     )
   )
 )
-
 server <- function(input, output, session) {
   chat_history <- reactiveVal(data.frame(Role = character(), Message = character(), stringsAsFactors = FALSE))
   registered <- reactiveVal(FALSE)
