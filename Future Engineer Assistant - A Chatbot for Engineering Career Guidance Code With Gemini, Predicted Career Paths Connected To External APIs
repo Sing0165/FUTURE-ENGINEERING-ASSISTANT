@@ -156,7 +156,6 @@ ui <- fluidPage(
       fluidPage(
         titlePanel(tags$div(class = "header-box", "Login")),
         tags$div(class = "registration-box",
-                 h3("Login to Future Engineer Assistant"),
                  textInput("login_username", "Username *", placeholder = "Enter your username..."),
                  passwordInput("login_password", "Password *"),
                  actionButton("loginBtn", "Login", class = "btn-primary", style = "width: auto;"),
