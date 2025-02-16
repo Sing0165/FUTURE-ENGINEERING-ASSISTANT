@@ -342,7 +342,6 @@ ui <- fluidPage(
                          sidebarLayout(
                            sidebarPanel(
                              titlePanel(tags$div(class = "header-box", "Ask Question Gemini Chatbot")),
-                             tags$h4("Would you like to have a conversation with a chatbot via text or audio?"),
                              radioButtons("input_method", "Choose Input Method:",
                                           choices = list("Text" = "text", "Audio Recording" = "audio"),
                                           inline = TRUE,
