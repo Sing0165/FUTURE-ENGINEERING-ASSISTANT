@@ -1,4 +1,3 @@
-# Load necessary libraries
 library(httr)
 library(shiny)
 library(DT)
@@ -148,87 +147,94 @@ ui <- fluidPage(
   tags$div(class = "bubble-title", "Future Engineer Assistant"),
   #tags$div(img(src = "cute_robot_logo.png", height = "100px", align = "center")),
 
-  # Login Section
+  # Login/Registration/Main App
   conditionalPanel(
-    condition = "!output.registered && !output.loggedIn",
-    fluidPage(
-      tags$div(class = "registration-box",
-               h3("Login to Future Engineer Assistant"),
-               textInput("login_username", "Username *", placeholder = "Enter your username..."),
-               passwordInput("login_password", "Password *"),
-               actionButton("loginBtn", "Login", class = "btn-primary", style = "width: auto;"),
-               tags$div(style = "text-align: center; margin-top: 10px;",
-                        tags$a(href = "#", onclick = "Shiny.setInputValue('navigateToRegistration', 1); return false;", "Don't have an account? Sign up", style = "margin-right: 15px;"),
-                        tags$a(href = "#", onclick = "Shiny.setInputValue('termsAndConditionsClicked', 1); return false;", "Terms and Conditions", style = "margin-right: 15px;"),
-                        tags$a(href = "#", onclick = "Shiny.setInputValue('privacyPolicyClicked', 1); return false;", "Privacy Policy")
-               )
+    condition = "!output.preSurveyCompleted",
+    # Login Section
+    conditionalPanel(
+      condition = "!output.registered && !output.loggedIn",
+      fluidPage(
+        titlePanel(tags$div(class = "header-box", "Login")),
+        tags$div(class = "registration-box",
+                 h3("Login to Future Engineer Assistant"),
+                 textInput("login_username", "Username *", placeholder = "Enter your username..."),
+                 passwordInput("login_password", "Password *"),
+                 actionButton("loginBtn", "Login", class = "btn-primary", style = "width: auto;"),
+                 tags$div(style = "text-align: center; margin-top: 10px;",
+                          tags$a(href = "#", onclick = "Shiny.setInputValue('navigateToRegistration', 1); return false;", "Don't have an account? Sign up", style = "margin-right: 15px;"),
+                          tags$a(href = "#", onclick = "Shiny.setInputValue('termsAndConditionsClicked', 1); return false;", "Terms and Conditions", style = "margin-right: 15px;"),
+                          tags$a(href = "#", onclick = "Shiny.setInputValue('privacyPolicyClicked', 1); return false;", "Privacy Policy")
+                 )
+        )
       )
-    )
-  ),
+    ),
 
-  # Registration Section
-  conditionalPanel(
-    condition = "output.registered && !output.loggedIn",
-    fluidPage(
-      tags$div(class = "registration-box",
-               h3("Register to Access Future Engineer Assistant"),
-               fluidRow(
-                 column(4, textInput("first_name", "First Name *", placeholder = "Enter your first name..."),
-                        dateInput("dob", "Date of Birth *", format = "mm/dd/yyyy"),
-                        textInput("username", "Username *", placeholder = "Enter your username..."),
-                        passwordInput("reg_password", "Password *")),
-                 column(4, textInput("last_name", "Last Name *", placeholder = "Enter your last name..."),
-                        textInput("school", "School *", placeholder = "Enter your school..."),
-                        selectInput("year", "Year *", choices = c("Freshman", "Sophomore", "Junior", "Senior")),
-                        passwordInput("reg_password_reenter", "Re-enter Password *")),
-                 column(4, textInput("email", "Email ID *", placeholder = "Enter your email..."),
-                        textInput("phone", "Phone Number", placeholder = "(000) - 000 0000"))
-               ),
-               fluidRow(
-                 column(6, radioButtons("gender", "Gender Identity:",
-                                        choices = c("Male", "Female", "Trans Male/Trans Man", "Trans Female/Trans Woman",
-                                                    "Genderqueer/Gender Non-Conforming", "Prefer to self-describe, please specify:", "Prefer not to say"))),
-                 column(6, checkboxGroupInput("race", "Race/Ethnicity (Please select all that apply):",
-                                              choices = c("American Indian or Alaska Native", "Asian", "Black or African American",
-                                                          "Hispanic or LatinX", "Native Hawaiian or Other Pacific Islander", "White")))
-               ),
-               checkboxInput("terms", "I agree to the Terms and Condition and Privacy Policy *", value = FALSE),
-               fluidRow(
-                 column(6, actionButton("registerBtn", "Register", class = "btn-primary")),
-                 column(6, actionButton("nextBtnReg", "Next", class = "btn-primary", disabled = TRUE))
-               ),
-               fluidRow(
-                 column(12, tags$div(style = "text-align: center; margin-top: 10px;",
-                                     tags$a(href = "#", onclick = "Shiny.setInputValue('navigateToLogin', 1); return false;", "Already have an account? Login", style = "margin-right: 15px;")
-                 )),
-                 uiOutput("registration_warning")
-               )
+    # Registration Section
+    conditionalPanel(
+      condition = "output.registered && !output.loggedIn",
+      fluidPage(
+        titlePanel(tags$div(class = "header-box", "Registration")),
+        tags$div(class = "registration-box",
+                 h3("Register to Access Future Engineer Assistant"),
+                 fluidRow(
+                   column(4, textInput("first_name", "First Name *", placeholder = "Enter your first name..."),
+                          dateInput("dob", "Date of Birth *", format = "mm/dd/yyyy"),
+                          textInput("username", "Username *", placeholder = "Enter your username..."),
+                          passwordInput("reg_password", "Password *")),
+                   column(4, textInput("last_name", "Last Name *", placeholder = "Enter your last name..."),
+                          textInput("school", "School *", placeholder = "Enter your school..."),
+                          selectInput("year", "Year *", choices = c("Freshman", "Sophomore", "Junior", "Senior")),
+                          passwordInput("reg_password_reenter", "Re-enter Password *")),
+                   column(4, textInput("email", "Email ID *", placeholder = "Enter your email..."),
+                          textInput("phone", "Phone Number", placeholder = "(000) - 000 0000"))
+                 ),
+                 fluidRow(
+                   column(6, radioButtons("gender", "Gender Identity:",
+                                          choices = c("Male", "Female", "Trans Male/Trans Man", "Trans Female/Trans Woman",
+                                                      "Genderqueer/Gender Non-Conforming", "Prefer to self-describe, please specify:", "Prefer not to say"))),
+                   column(6, checkboxGroupInput("race", "Race/Ethnicity (Please select all that apply):",
+                                                choices = c("American Indian or Alaska Native", "Asian", "Black or African American",
+                                                            "Hispanic or LatinX", "Native Hawaiian or Other Pacific Islander", "White")))
+                 ),
+                 checkboxInput("terms", "I agree to the Terms and Condition and Privacy Policy *", value = FALSE),
+                 fluidRow(
+                   column(6, actionButton("registerBtn", "Register", class = "btn-primary")),
+                   column(6, actionButton("nextBtnReg", "Next", class = "btn-primary", disabled = TRUE))
+                 ),
+                 fluidRow(
+                   column(12, tags$div(style = "text-align: center; margin-top: 10px;",
+                                       tags$a(href = "#", onclick = "Shiny.setInputValue('navigateToLogin', 1); return false;", "Already have an account? Login", style = "margin-right: 15px;")
+                   )),
+                   uiOutput("registration_warning")
+                 )
+        )
       )
-    )
-  ),
+    ),
 
-  # Pre-Survey Confirmation
-  conditionalPanel(
-    condition = "output.loggedIn && !output.preSurveyCompleted",
-    fluidPage(
-      tags$div(class = "registration-box",
-               h3("Pre-Survey Confirmation"),
-               tags$p("Please confirm that you have completed the pre-survey."),
-               tags$p("Complete this survey and contact me (akshay.singh-1@ou.edu) to ask any questions regarding participation in the research."),
-               tags$p("What will participants be asked to do? If you agree to be in this research, you will be required to complete three tasks:"),
-               tags$ul(
-                 tags$li("Complete a pre-survey (5–7-minute online survey)"),
-                 tags$li("Interact with the chatbot to obtain predicted career paths (5–30-minute online platform)"),
-                 tags$li("Complete a post-survey (5–7-minute online survey)")
-               ),
-               tags$strong("Purpose:"),
-               tags$p("The research aims to understand engineering students' perceptions on the use of an AI platform to select their career paths."),
-               tags$strong("Participants:"),
-               tags$p("Around 300 people will be involved within this research."),
-               tags$a(href = "https://ousurvey.qualtrics.com/jfe/form/SV_0wBJjQYoTv2v0ii", target = "_blank",
-                      class = "important-link", "Complete Pre-Survey"),
-               checkboxInput("preSurveyCheck", "I have completed the pre-survey.", value = FALSE),
-               actionButton("confirmSurveyBtn", "Continue", class = "btn-primary")
+    # Pre-Survey Confirmation
+    conditionalPanel(
+      condition = "output.loggedIn && !output.preSurveyCompleted",
+      fluidPage(
+        titlePanel(tags$div(class = "header-box", "Pre-Survey Confirmation")),
+        tags$div(class = "registration-box",
+                 h3("Pre-Survey Confirmation"),
+                 tags$p("Please confirm that you have completed the pre-survey."),
+                 tags$p("Complete this survey and contact me (akshay.singh-1@ou.edu) to ask any questions regarding participation in the research."),
+                 tags$p("What will participants be asked to do? If you agree to be in this research, you will be required to complete three tasks:"),
+                 tags$ul(
+                   tags$li("Complete a pre-survey (5–7-minute online survey)"),
+                   tags$li("Interact with the chatbot to obtain predicted career paths (5–30-minute online platform)"),
+                   tags$li("Complete a post-survey (5–7-minute online survey)")
+                 ),
+                 tags$strong("Purpose:"),
+                 tags$p("The research aims to understand engineering students' perceptions on the use of an AI platform to select their career paths."),
+                 tags$strong("Participants:"),
+                 tags$p("Around 300 people will be involved within this research."),
+                 tags$a(href = "https://ousurvey.qualtrics.com/jfe/form/SV_0wBJjQYoTv2v0ii", target = "_blank",
+                        class = "important-link", "Complete Pre-Survey"),
+                 checkboxInput("preSurveyCheck", "I have completed the pre-survey.", value = FALSE),
+                 actionButton("confirmSurveyBtn", "Continue", class = "btn-primary")
+        )
       )
     )
   ),
@@ -271,6 +277,7 @@ ui <- fluidPage(
                              uiOutput("questionsProgress")
                            ),
                            mainPanel(
+                             titlePanel(tags$div(class = "header-box", "Questionnaire")),
                              tags$div(class = "pink-box",
                                       tags$h4("Personalized Questionare"),
                                       div(class = "chat-history",
@@ -290,6 +297,7 @@ ui <- fluidPage(
 
                 tabPanel("Quick Glimpse",
                          fluidPage(
+                           titlePanel(tags$div(class = "header-box", "Quick Glimpse")),
                            tags$div(class = "completion-box", style = "background-color: #E6E6FA;", # Lavender color
                                     h2("Quick Glimpse"),
                                     p("Based on the options selected, a personalized summary of preferences and interests has been created. It appears that the choices align with the following themes:"),
@@ -304,6 +312,7 @@ ui <- fluidPage(
 
                 tabPanel("Post Survey",
                          fluidPage(
+                           titlePanel(tags$div(class = "header-box", "Post Survey")),
                            tags$div(class = "completion-box", style = "text-align: left;",
                                     h2("Please Complete Post Survey"),
                                     p("Thank you for taking the time to participate in this survey. Your involvement is crucial for the success of our research study. The data you provide will be utilized for both the pilot testing and final results, helping us evaluate the effectiveness of the AI-guided platform. Your responses will directly inform how the platform is designed to assist undergraduate engineering students in selecting their majors. We deeply appreciate the valuable insights you are contributing to this project.
@@ -322,6 +331,7 @@ ui <- fluidPage(
 
                 tabPanel("Welcome to Chatbot",
                          fluidPage(
+                           titlePanel(tags$div(class = "header-box", "Welcome to Chatbot")),
                            tags$div(class = "welcome-box",
                                     img(src = "https://png.pngtree.com/png-clipart/20230401/original/pngtree-smart-chatbot-cartoon-clipart-png-image_9015126.png", height = "200px", align = "center"),
                                     h3("Welcome to Gemini Chatbot"),
@@ -335,6 +345,7 @@ ui <- fluidPage(
                 tabPanel("Ask Question Gemini Chatbot",
                          sidebarLayout(
                            sidebarPanel(
+                             titlePanel(tags$div(class = "header-box", "Ask Question Gemini Chatbot")),
                              tags$h4("Would you like to have a conversation with a chatbot via text or audio?"),
                              radioButtons("input_method", "Choose Input Method:",
                                           choices = list("Text" = "text", "Audio Recording" = "audio"),
@@ -347,6 +358,7 @@ ui <- fluidPage(
                              actionButton("askQuestionBtn", "Ask Question", class = "btn-primary")
                            ),
                            mainPanel(
+                             titlePanel(tags$div(class = "header-box", "Chatbot Output")),
                              tags$div(class = "pink-box chat-responses",
                                       tags$p("Ask the chatbot any questions regarding career-related topics."),
                                       tags$p("Type your question or use the audio feature for a more hands-free interaction."),
@@ -380,6 +392,7 @@ ui <- fluidPage(
                 tabPanel("Salary Prediction",
                          sidebarLayout(
                            sidebarPanel(
+                             titlePanel(tags$div(class = "header-box", "Salary Prediction")),
                              tags$h4("Instructions"),
                              tags$p("1. Select from a variety of engineering career paths and experience levels."),
                              tags$p("2. Provide this information to receive salary insights based on the latest industry standards."),
@@ -390,6 +403,7 @@ ui <- fluidPage(
                              actionButton("askSalaryQuestions", "Get Salary Information", class = "btn-primary")
                            ),
                            mainPanel(
+                             titlePanel(tags$div(class = "header-box", "Salary Output")),
                              tags$div(class = "pink-box scrollable",
                                       DTOutput("salaryResponsesTable"),
                                       downloadButton("downloadSalaryResponses", "Download Salary Responses CSV", class = "btn-primary"),
@@ -405,11 +419,13 @@ ui <- fluidPage(
                 tabPanel("User Dashboard",
                          sidebarLayout(
                            sidebarPanel(
+                             titlePanel(tags$div(class = "header-box", "User Dashboard")),
                              tags$h4("Your Dashboard"),
                              actionButton("viewChatHistory", "View Chat History", class = "btn-primary"),
                              actionButton("viewCareerPaths", "View Career Paths", class = "btn-primary")
                            ),
                            mainPanel(
+                             titlePanel(tags$div(class = "header-box", "Dashboard Output")),
                              tags$div(id = "dashboardOutput")
                            )
                          )
@@ -417,6 +433,7 @@ ui <- fluidPage(
 
                 tabPanel("Session Completed",
                          fluidPage(
+                           titlePanel(tags$div(class = "header-box", "Session Completed")),
                            tags$div(class = "completion-box",
                                     h2("Session Completed"),
                                     p("The session has been completed!"),
@@ -429,14 +446,14 @@ ui <- fluidPage(
                 # New Interactive Career Path Visualization
                 tabPanel("Career Path Visualization",
                          fluidPage(
-                           titlePanel("Explore Your Career Path"),
+                           titlePanel(tags$div(class = "header-box", "Career Path Visualization")),
                            tags$div("Select a career path to see the details."),
                            uiOutput("careerPathSelector"),
                            visNetworkOutput("careerPathNetwork")
                          )
                 )
-                )
-      )
+    )
+  )
 )
 
 server <- function(input, output, session) {
