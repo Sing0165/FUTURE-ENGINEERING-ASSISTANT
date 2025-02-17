@@ -335,8 +335,8 @@ ui <- fluidPage(
                            titlePanel(tags$div(class = "header-box", "Welcome to Chatbot")),
                            tags$div(class = "welcome-box",
                                     img(src = "https://png.pngtree.com/png-clipart/20230401/original/pngtree-smart-chatbot-cartoon-clipart-png-image_9015126.png", height = "200px", align = "center"),
-                                    p("The Future Engineer Assistant (FEA) is an innovative AI-powered chatbot designed specifically to provide personalized career guidance for engineering students. By leveraging advanced natural language processing (NLP) and generative AI technologies, the FEA engages users in dynamic, interactive conversations that facilitate the exploration of potential career paths. Unlike traditional career counseling methods, which can be limited in personalization and immediacy, the FEA is capable of tailoring its responses based on real-time user inputs. This enables the chatbot to offer customized advice and insights that align more closely with individual interests and academic backgrounds."),
-                                    p("At the heart of the FEA's functionality is its ability to generate context-specific questions aimed at uncovering important information about users’ preferences, aspirations, and academic strengths. By employing a generative AI model integrated through an API, the chatbot can produce engaging prompts that encourage students to reflect on their career goals. This dynamic questioning process enhances the depth of information gathered and fosters an interactive environment where students feel comfortable exploring their options."),
+                                    p("The Future Engineer Assistant (FEA) is an innovative AI-powered chatbot designed specifically to provide personalized career guidance for engineering students. By leveraging advanced natural language processing (NLP) and generative AI technologies, the FEA engages users in dynamic, interactive conversations that facilitate the exploration of potential career paths."),
+                                    p("At the heart of the FEA's functionality is its ability to generate context-specific questions aimed at uncovering important information about users’ preferences, aspirations, and academic strengths. By employing a generative AI model integrated through an API, the chatbot can produce engaging prompts that encourage students to reflect on their career goals.."),
                                     actionButton("nextToGeminiChatbot", "Next to Gemini Chatbot", class = "btn-primary")
                            )
                          )
@@ -562,7 +562,8 @@ server <- function(input, output, session) {
     if (!isCareerRelated(input_text, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")) {
       showModal(modalDialog(
         title = "Staying on Topic",
-        "Please stay on topic. We are having an essential conversation regarding your future career paths.",
+        "We are having an essential conversation regarding your future career paths. This discussion will help you make informed decisions based on your interests, skills, and aspirations. Take your time to carefully consider your responses, as they will shape the recommendations and insights provided.
+Your career journey is unique, and this interactive session is designed to guide you toward opportunities that align with your goals. Stay engaged and explore the possibilities that await you!",
         easyClose = TRUE,
         footer = NULL
       ))
@@ -1165,3 +1166,4 @@ server <- function(input, output, session) {
   })
 }
 shinyApp(ui,server)
+
