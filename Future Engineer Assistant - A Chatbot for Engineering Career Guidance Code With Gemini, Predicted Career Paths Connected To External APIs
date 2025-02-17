@@ -324,9 +324,7 @@ ui <- fluidPage(
 
                                     As a participant, your feedback will help us understand how students perceive and interact with AI when making academic decisions. We are committed to using the information gathered to refine the platform and ensure it meets the needs of students across various engineering disciplines. Your input is essential for enhancing the functionality and user experience of the system.
 
-                                    Once you complete the survey, you will be directed to the chatbot section, where you can engage with the AI tool. This section will give you the opportunity to interact with the platform firsthand and explore how it can assist with career and major decisions. Your experience with the chatbot will help us assess its performance and make necessary improvements before the final implementation.
-
-                                    We truly appreciate your time and effort in contributing to this research. Your participation will make a significant impact on the future development of the AI-guided platform. Should you have any questions or concerns during or after completing the survey, please don't hesitate to reach out to Dr. Javeed Kittur at jkittur@ou.edu. Thank you again for being a part of this important study."),
+                                    We truly appreciate your time and effort in contributing to this research. Your participation will make a significant impact on the future development of the AI-guided platform."),
                                     # OTP Input
                                     textInput("otpInput", "Enter OTP:", placeholder = "Enter OTP"),
                                     actionButton("verifyOTP", "Verify OTP", class = "btn-primary"),
