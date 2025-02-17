@@ -756,7 +756,7 @@ server <- function(input, output, session) {
   })
 
   output$predictedCareerPaths <- renderUI({
-    if (current_question_index() == (length(randomized_questions())) {
+    if (current_question_index() == (length(randomized_questions()) + 1) {
       actionButton("nextToGlimpse", "Next to See Predicted Career Paths", class = "btn-primary")
     }
   })
