@@ -235,8 +235,12 @@ ui <- fluidPage(
                  tags$p("Around 300 people will be involved within this research."),
                  tags$a(href = "https://ousurvey.qualtrics.com/jfe/form/SV_0wBJjQYoTv2v0ii", target = "_blank",
                         class = "important-link", "Complete Pre-Survey"),
+                 # OTP Input for Pre-Survey
+                 textInput("pre_otpInput", "Enter OTP:", placeholder = "Enter OTP"),
+                 actionButton("verifyPreOTP", "Verify OTP", class = "btn-primary"),
+                 uiOutput("preOtpStatus"),
                  checkboxInput("preSurveyCheck", "I have completed the pre-survey.", value = FALSE),
-                 actionButton("confirmSurveyBtn", "Continue", class = "btn-primary")
+                 actionButton("confirmSurveyBtn", "Continue", class = "btn-primary", disabled = TRUE)
         )
       )
     )
@@ -251,7 +255,6 @@ ui <- fluidPage(
                          fluidPage(
                            titlePanel(tags$div(class = "header-box", "Introduction")),
                            tags$div(class = "welcome-box",
-                                    img(src = "welcome_image.png", height = "200px", align = "center"),
                                     p("Welcome to the Future Engineer Assistant (FEA) app, a dynamic and interactive platform designed specifically for engineering students navigating the complexities of career selection. As you journey through the application, you'll encounter tailored questionnaires, insightful recommendations, and interactive visualizations that empower you to make informed decisions about your future. Dive in and let us help you shape your future!"),
                                     tags$div(class = "instructions-box",
                                              h3("Instructions:"),
@@ -478,9 +481,20 @@ server <- function(input, output, session) {
 
   # OTP Logic
   otp <- reactiveVal("")
+  pre_otp <- reactiveVal("") # OTP for pre-survey
   otp_attempts <- reactiveVal(0)
   max_otp_attempts <- 3
   otp_verified <- reactiveVal(FALSE)
+  pre_otp_verified <- reactiveVal(FALSE) # Pre-survey OTP verification
+
+  # Generate OTP for Pre-Survey
+  observe({
+    if (loggedIn() && !preSurveyCompleted()) {
+      new_otp <- generateOTP()
+      pre_otp(new_otp)
+      cat("Pre-Survey OTP generated:", new_otp, "\n")
+    }
+  })
 
   # Generate OTP when the Post Survey Tab is reached
   observeEvent(input$tabs, {
@@ -488,7 +502,41 @@ server <- function(input, output, session) {
       new_otp <- generateOTP()
       otp(new_otp)
       otp_attempts(0) # Reset attempts each time the tab is revisited
-      cat("OTP generated:", new_otp, "\n")  # Print OTP to console for testing
+      cat("Post-Survey OTP generated:", new_otp, "\n")  # Print OTP to console for testing
+    }
+  })
+
+  # Pre-Survey OTP verification
+  observeEvent(input$verifyPreOTP, {
+    if (input$preSurveyCheck) {
+      showModal(modalDialog(
+        title = "OTP Verification",
+        "Please uncheck the box before submitting.",
+        easyClose = TRUE,
+        footer = NULL
+      ))
+      return()
+    }
+    if (otp_attempts() < max_otp_attempts) {
+      if (input$pre_otpInput == pre_otp()) {
+        pre_otp_verified(TRUE)
+        output$preOtpStatus <- renderUI({
+          tags$p(style = "color: green;", "Pre-Survey OTP verified successfully!")
+        })
+        shinyjs::enable("confirmSurveyBtn")
+      } else {
+        otp_attempts(otp_attempts() + 1)
+        output$preOtpStatus <- renderUI({
+          tags$p(style = "color: red;", paste("Incorrect OTP. Attempts remaining:", max_otp_attempts - otp_attempts()))
+        })
+        if (otp_attempts() >= max_otp_attempts) {
+          output$preOtpStatus <- renderUI({
+            tags$p(style = "color: red;", "Maximum OTP attempts reached. Please refresh the page.")
+          })
+          shinyjs::disable("verifyPreOTP")
+          shinyjs::disable("confirmSurveyBtn")
+        }
+      }
     }
   })
 
@@ -594,8 +642,18 @@ server <- function(input, output, session) {
 
   observeEvent(input$confirmSurveyBtn, {
     if (input$preSurveyCheck) {
+      showModal(modalDialog(
+        title = "Survey Warning",
+        "Please uncheck the box before submitting.",
+        easyClose = TRUE,
+        footer = NULL
+      ))
+      return()
+    }
+    if (pre_otp_verified()){
       preSurveyCompleted(TRUE)
       tabs_access(c(TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE))
+      updateTabsetPanel(session, "tabs", selected = "Introduction")
     }
   })
 
@@ -619,7 +677,7 @@ server <- function(input, output, session) {
       if (any(user$Username == input$login_username & user$Password == hashed_login_password)) {
         loggedIn(TRUE)
         resetChat()
-        tabs_access(c(TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE))
+        tabs_access(c(TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE))
       } else {
         showModal(modalDialog(
           title = "Login Error",
