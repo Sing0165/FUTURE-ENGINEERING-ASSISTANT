@@ -728,7 +728,7 @@ server <- function(input, output, session) {
     chat_history(rbind(chat_history(), data.frame(Role = "User", Message = answer_text, stringsAsFactors = FALSE)))
 
     # Only call askCareerQuestions if the current index is valid
-    if (current_question_index() > 11) {
+    if (current_question_index() > 10) {
       showModal(modalDialog(
         title = "Error",
         "Please ensure you answer all questions to see the predicted career paths.",
@@ -755,13 +755,11 @@ server <- function(input, output, session) {
     )
   })
 
- output$predictedCareerPaths <- renderUI({
-       if (current_question_index() == (length(randomized_questions()) + 1) {
+  output$predictedCareerPaths <- renderUI({
+    if (current_question_index() == (length(randomized_questions()) + 1)) {
       actionButton("nextToGlimpse", "Next to See Predicted Career Paths", class = "btn-primary")
     }
   })
-
-
 
   observeEvent(input$nextToGlimpse, {
     user_answers <- unlist(chat_history()[chat_history()$Role == "User", "Message"])
@@ -1116,5 +1114,5 @@ server <- function(input, output, session) {
   })
 }
 
-shinyApp(ui = ui, server = server)
 
+shinyApp(ui = ui, server = server)
