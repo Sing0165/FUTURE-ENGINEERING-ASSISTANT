@@ -728,7 +728,7 @@ server <- function(input, output, session) {
     chat_history(rbind(chat_history(), data.frame(Role = "User", Message = answer_text, stringsAsFactors = FALSE)))
 
     # Only call askCareerQuestions if the current index is valid
-    if (current_question_index() > 10) {
+    if (current_question_index() > 11) {
       showModal(modalDialog(
         title = "Error",
         "Please ensure you answer all questions to see the predicted career paths.",
