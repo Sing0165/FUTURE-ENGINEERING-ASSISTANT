@@ -76,15 +76,11 @@ connectCareerToChatbot <- function(input_question, predicted_paths, api_key) {
 }
 
 isCareerRelated <- function(input_text, api_key) {
-  prompt <- paste("Analyze the following user input and determine whether it relates to career pathways or job-related topics:", input_text)
+  prompt <- paste("Analyze the following user input and determine whether it relates to career pathways or job-related topics.  Consider if the input mentions: career, job, profession, engineering, major, skills, employment, opportunities, education, university, resume, interview, professional development, internships, or similar topics.  The response should be only 'YES' or 'NO'. Do not include any other text.", input_text)
   analysis_response <- generateContent(prompt, api_key)
-
-  if (grepl("career|job|profession|engineering|major|skills|employment|opportunities", analysis_response, ignore.case = TRUE)) {
-    return(TRUE)
-  } else {
-    return(FALSE)
-  }
+  return(grepl("YES", analysis_response, ignore.case = TRUE))
 }
+
 
 # Functions to clean text and format tables
 clean_text <- function(text) {
@@ -537,8 +533,7 @@ server <- function(input, output, session) {
       }
     }
   })
-
-  # OTP verification logic
+# OTP verification logic
   observeEvent(input$verifyOTP, {
     if (otp_attempts() < max_otp_attempts) {
       if (input$otpInput == otp()) {
@@ -1169,6 +1164,4 @@ server <- function(input, output, session) {
     updateTabsetPanel(session, "tabs", selected = "Post Survey")
   })
 }
-
-
-shinyApp(ui = ui, server = server)
+shinyApp(ui,server)
