@@ -93,6 +93,11 @@ clean_text <- function(text) {
   return(trimws(text))
 }
 
+# Generate OTP function
+generateOTP <- function(length = 6) {
+  paste(sample(0:9, length, replace = TRUE), collapse = "")
+}
+
 # User Interface
 ui <- fluidPage(
   useShinyjs(),
@@ -319,9 +324,11 @@ ui <- fluidPage(
                                     Once you complete the survey, you will be directed to the chatbot section, where you can engage with the AI tool. This section will give you the opportunity to interact with the platform firsthand and explore how it can assist with career and major decisions. Your experience with the chatbot will help us assess its performance and make necessary improvements before the final implementation.
 
                                     We truly appreciate your time and effort in contributing to this research. Your participation will make a significant impact on the future development of the AI-guided platform. Should you have any questions or concerns during or after completing the survey, please don't hesitate to reach out to Dr. Javeed Kittur at jkittur@ou.edu. Thank you again for being a part of this important study."),
-                                    tags$a(href = "https://ousurvey.qualtrics.com/jfe/form/SV_3n3jlqsnkoMkn0W", target = "_blank",
-                                            class = "important-link", "Click here to complete the Post Survey"),
-                                    actionButton("nextToWelcomeChatbot", "Next to Welcome Chatbot", class = "btn-primary")
+                                    # OTP Input
+                                    textInput("otpInput", "Enter OTP:", placeholder = "Enter OTP"),
+                                    actionButton("verifyOTP", "Verify OTP", class = "btn-primary"),
+                                    uiOutput("otpStatus"),
+                                    actionButton("nextToWelcomeChatbot", "Next to Welcome Chatbot", class = "btn-primary", disabled = TRUE)
                            )
                          )
                 ),
@@ -468,6 +475,46 @@ server <- function(input, output, session) {
   user_career_paths <- reactiveVal(data.frame(Date = character(), Career_Path = character(), stringsAsFactors = FALSE))
 
   tabs_access <- reactiveVal(c(FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE))
+
+  # OTP Logic
+  otp <- reactiveVal("")
+  otp_attempts <- reactiveVal(0)
+  max_otp_attempts <- 3
+  otp_verified <- reactiveVal(FALSE)
+
+  # Generate OTP when the Post Survey Tab is reached
+  observeEvent(input$tabs, {
+    if (input$tabs == "Post Survey" && !otp_verified()) {
+      new_otp <- generateOTP()
+      otp(new_otp)
+      otp_attempts(0) # Reset attempts each time the tab is revisited
+      cat("OTP generated:", new_otp, "\n")  # Print OTP to console for testing
+    }
+  })
+
+  # OTP verification logic
+  observeEvent(input$verifyOTP, {
+    if (otp_attempts() < max_otp_attempts) {
+      if (input$otpInput == otp()) {
+        otp_verified(TRUE)
+        output$otpStatus <- renderUI({
+          tags$p(style = "color: green;", "OTP verified successfully!")
+        })
+        shinyjs::enable("nextToWelcomeChatbot")
+      } else {
+        otp_attempts(otp_attempts() + 1)
+        output$otpStatus <- renderUI({
+          tags$p(style = "color: red;", paste("Incorrect OTP. Attempts remaining:", max_otp_attempts - otp_attempts()))
+        })
+        if (otp_attempts() >= max_otp_attempts) {
+          output$otpStatus <- renderUI({
+            tags$p(style = "color: red;", "Maximum OTP attempts reached. Please refresh the page.")
+          })
+          shinyjs::disable("verifyOTP")
+        }
+      }
+    }
+  })
 
   # Function to check if the user's input is on topic
   checkUserInput <- function(input_text) {
