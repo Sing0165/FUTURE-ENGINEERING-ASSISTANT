@@ -81,7 +81,6 @@ isCareerRelated <- function(input_text, api_key) {
   return(grepl("YES", analysis_response, ignore.case = TRUE))
 }
 
-
 # Functions to clean text and format tables
 clean_text <- function(text) {
   text <- gsub("\\*\\*+", "", text)
@@ -305,7 +304,6 @@ ui <- fluidPage(
                                     tags$div(class = "split-table",
                                              verbatimTextOutput("predictedCareerPathsTableOutput")
                                     ),
-                                    downloadButton("downloadCareerPaths", "Download Predicted Career Paths CSV", class = "btn-primary"),
                                     actionButton("nextToPostSurvey", "Next to Post Survey", class = "btn-primary")
                            )
                          )
@@ -368,7 +366,6 @@ ui <- fluidPage(
                                           DTOutput("chatOutputResponses")
                                       ),
                                       actionButton("loadingResponse", "Waiting for Response...", loading = TRUE, style = "display: none;"),
-                                      downloadButton("downloadChatbotResponses", "Download Chatbot Responses CSV", class = "btn-primary"),
                                       actionButton("nextToSalaryInstructions", "Next to Salary Instructions", class = "btn-primary")
                              )
                            )
@@ -408,7 +405,6 @@ ui <- fluidPage(
                              titlePanel(tags$div(class = "header-box", "Salary Output")),
                              tags$div(class = "pink-box scrollable",
                                       DTOutput("salaryResponsesTable"),
-                                      downloadButton("downloadSalaryResponses", "Download Salary Responses CSV", class = "btn-primary"),
                                       actionButton("loadingSalaryResponse", "Waiting for Response...", loading = TRUE, style = "display: none;"),
                                       plotlyOutput("salary_histogram"),
                                       plotlyOutput("salary_boxplot"),
@@ -424,7 +420,10 @@ ui <- fluidPage(
                            tags$div(class = "completion-box",
                                     h2("Summary of Your Career Exploration"),
                                     p("This page concludes your exploration into career choices, providing an overview of your predicted career paths, chatbot responses, and salary information gathered during the session. Reviewing these insights allows you to make informed decisions about your future career trajectory as you assess various opportunities."),
-                                    p("You may revisit your selected career paths, revisit any chatbot interactions, and reflect on the financial implications of your choices. This holistic overview serves to empower you as you navigate your academic and professional journey towards a fulfilling engineering career.")
+                                    p("You may revisit your selected career paths, revisit any chatbot interactions, and reflect on the financial implications of your choices. This holistic overview serves to empower you as you navigate your academic and professional journey towards a fulfilling engineering career."),
+                                    downloadButton("downloadCareerPaths", "Download Predicted Career Paths CSV", class = "btn-primary"),
+                                    downloadButton("downloadSalaryResponses", "Download Salary Responses CSV", class = "btn-primary"),
+                                    downloadButton("downloadChatbotResponses", "Download Chatbot Responses CSV", class = "btn-primary")
                            )
                          )
                 ),
@@ -468,721 +467,717 @@ ui <- fluidPage(
     )
   )
 )
-  server <- function(input, output, session) {
-    chat_history <- reactiveVal(data.frame(Role = character(), Message = character(), stringsAsFactors = FALSE))
-    registered <- reactiveVal(FALSE)
-    loggedIn <- reactiveVal(FALSE)
-    preSurveyCompleted <- reactiveVal(FALSE)
-    salary_responses <- reactiveVal(data.frame(Job_Title = character(), Experience_Level = character(), Response = character(), stringsAsFactors = FALSE))
-    current_question_index <- reactiveVal(1)
-    randomized_questions <- reactiveVal()
-    chatbot_responses <- reactiveVal(data.frame(Question = character(), Response = character(), stringsAsFactors = FALSE))
 
-    user_details <- loadUserData()
-    recommended_careers <- reactiveVal(NULL)
-    predicted_career_paths <- reactiveVal(NULL)
+server <- function(input, output, session) {
+  chat_history <- reactiveVal(data.frame(Role = character(), Message = character(), stringsAsFactors = FALSE))
+  registered <- reactiveVal(FALSE)
+  loggedIn <- reactiveVal(FALSE)
+  preSurveyCompleted <- reactiveVal(FALSE)
+  salary_responses <- reactiveVal(data.frame(Job_Title = character(), Experience_Level = character(), Response = character(), stringsAsFactors = FALSE))
+  current_question_index <- reactiveVal(1)
+  randomized_questions <- reactiveVal()
+  chatbot_responses <- reactiveVal(data.frame(Question = character(), Response = character(), stringsAsFactors = FALSE))
 
-    user_chat_history <- reactiveVal(data.frame(Date = character(), Chat = character(), stringsAsFactors = FALSE))
-    user_career_paths <- reactiveVal(data.frame(Date = character(), Career_Path = character(), stringsAsFactors = FALSE))
+  user_details <- loadUserData()
+  recommended_careers <- reactiveVal(NULL)
+  predicted_career_paths <- reactiveVal(NULL)
 
-    tabs_access <- reactiveVal(c(FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE))
+  user_chat_history <- reactiveVal(data.frame(Date = character(), Chat = character(), stringsAsFactors = FALSE))
+  user_career_paths <- reactiveVal(data.frame(Date = character(), Career_Path = character(), stringsAsFactors = FALSE))
 
-    # OTP Logic
-    otp <- reactiveVal("")
-    pre_otp <- reactiveVal("") # OTP for pre-survey
-    otp_attempts <- reactiveVal(0)
-    max_otp_attempts <- 3
-    otp_verified <- reactiveVal(FALSE)
-    pre_otp_verified <- reactiveVal(FALSE) # Pre-survey OTP verification
+  tabs_access <- reactiveVal(c(FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE))
 
-    # Generate OTP for Pre-Survey
-    observe({
-      if (loggedIn() && !preSurveyCompleted()) {
-        new_otp <- generateOTP()
-        pre_otp(new_otp)
-        cat("Pre-Survey OTP generated:", new_otp, "\n")
-      }
-    })
+  # OTP Logic
+  otp <- reactiveVal("")
+  pre_otp <- reactiveVal("") # OTP for pre-survey
+  otp_attempts <- reactiveVal(0)
+  max_otp_attempts <- 3
+  otp_verified <- reactiveVal(FALSE)
+  pre_otp_verified <- reactiveVal(FALSE) # Pre-survey OTP verification
 
-    # Generate OTP when the Post Survey Tab is reached
-    observeEvent(input$tabs, {
-      if (input$tabs == "Post Survey" && !otp_verified()) {
-        new_otp <- generateOTP()
-        otp(new_otp)
-        otp_attempts(0) # Reset attempts each time the tab is revisited
-        cat("Post-Survey OTP generated:", new_otp, "\n")  # Print OTP to console for testing
-      }
-    })
-
-    # Pre-Survey OTP verification
-    observeEvent(input$verifyPreOTP, {
-      if (input$preSurveyCheck) {
-        showModal(modalDialog(
-          title = "OTP Verification",
-          "Please uncheck the box before submitting.",
-          easyClose = TRUE,
-          footer = NULL
-        ))
-        return()
-      }
-      if (otp_attempts() < max_otp_attempts) {
-        if (input$pre_otpInput == pre_otp()) {
-          pre_otp_verified(TRUE)
-          output$preOtpStatus <- renderUI({
-            tags$p(style = "color: green;", "Pre-Survey OTP verified successfully!")
-          })
-          shinyjs::enable("confirmSurveyBtn")
-        } else {
-          otp_attempts(otp_attempts() + 1)
-          output$preOtpStatus <- renderUI({
-            tags$p(style = "color: red;", paste("Incorrect OTP. Attempts remaining:", max_otp_attempts - otp_attempts()))
-          })
-          if (otp_attempts() >= max_otp_attempts) {
-            output$preOtpStatus <- renderUI({
-              tags$p(style = "color: red;", "Maximum OTP attempts reached. Please refresh the page.")
-            })
-            shinyjs::disable("verifyPreOTP")
-            shinyjs::disable("confirmSurveyBtn")
-          }
-        }
-      }
-    })
-
-    # OTP verification logic
-    observeEvent(input$verifyOTP, {
-      if (otp_attempts() < max_otp_attempts) {
-        if (input$otpInput == otp()) {
-          otp_verified(TRUE)
-          output$otpStatus <- renderUI({
-            tags$p(style ="color: green;", "OTP verified successfully!")
-          })
-          shinyjs::enable("nextToWelcomeChatbot")
-        } else {
-          otp_attempts(otp_attempts() + 1)
-          output$otpStatus <- renderUI({
-            tags$p(style = "color: red;", paste("Incorrect OTP. Attempts remaining:", max_otp_attempts - otp_attempts()))
-          })
-          if (otp_attempts() >= max_otp_attempts) {
-            output$otpStatus <- renderUI({
-              tags$p(style = "color: red;", "Maximum OTP attempts reached. Please refresh the page.")
-            })
-            shinyjs::disable("verifyOTP")
-          }
-        }
-      }
-    })
-
-    # Function to check if the user's input is on topic
-    checkUserInput <- function(input_text) {
-      if (!isCareerRelated(input_text, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")) {
-        showModal(modalDialog(
-          title = "Staying on Topic",
-          "We are having an essential conversation regarding your future career paths. This discussion will help you make informed decisions based on your interests, skills, and aspirations. Take your time to carefully consider your responses, as they will shape the recommendations and insights provided. Your career journey is unique, and this interactive session is designed to guide you toward opportunities that align with your goals. Stay engaged and explore the possibilities that await you!",
-          easyClose = TRUE,
-          footer = NULL
-        ))
-        return(FALSE)
-      }
-      return(TRUE)
+  # Generate OTP for Pre-Survey
+  observe({
+    if (loggedIn() && !preSurveyCompleted()) {
+      new_otp <- generateOTP()
+      pre_otp(new_otp)
+      cat("Pre-Survey OTP generated:", new_otp, "\n")
     }
+  })
 
-    observeEvent(input$registerBtn, {
-      required_fields <- c(input$first_name, input$last_name, input$username, input$reg_password,
-                           input$reg_password_reenter, input$email, input$school, input$year,
-                           input$gender, input$terms)
+  # Generate OTP when the Post Survey Tab is reached
+  observeEvent(input$tabs, {
+    if (input$tabs == "Post Survey" && !otp_verified()) {
+      new_otp <- generateOTP()
+      otp(new_otp)
+      otp_attempts(0) # Reset attempts each time the tab is revisited
+      cat("Post-Survey OTP generated:", new_otp, "\n")  # Print OTP to console for testing
+    }
+  })
 
-      field_names <- c("First Name", "Last Name", "Username", "Password",
-                       "Re-enter Password", "Email", "School", "Year",
-                       "Gender Identity", "Terms and Conditions")
-
-      empty_fields <- field_names[sapply(required_fields, function(x) is.na(x) || x == "")]
-
-      if (length(empty_fields) > 0) {
-        showModal(modalDialog(
-          title = "Registration Warning",
-          paste("Please complete the following fields:", paste(empty_fields, collapse = ", ")),
-          easyClose = TRUE,
-          footer = NULL,
-          size = "m"
-        ))
+  # Pre-Survey OTP verification
+  observeEvent(input$verifyPreOTP, {
+    if (input$preSurveyCheck) {
+      showModal(modalDialog(
+        title = "OTP Verification",
+        "Please uncheck the box before submitting.",
+        easyClose = TRUE,
+        footer = NULL
+      ))
+      return()
+    }
+    if (otp_attempts() < max_otp_attempts) {
+      if (input$pre_otpInput == pre_otp()) {
+        pre_otp_verified(TRUE)
+        output$preOtpStatus <- renderUI({
+          tags$p(style = "color: green;", "Pre-Survey OTP verified successfully!")
+        })
+        shinyjs::enable("confirmSurveyBtn")
       } else {
-        if (input$terms) {
-          if (input$reg_password == input$reg_password_reenter) {
-            hashed_password <- digest(input$reg_password, algo = "sha256")
-            new_user <- data.frame(Username = input$username, Password = hashed_password, stringsAsFactors = FALSE)
-            user_details <<- rbind(user_details, new_user)
-            saveUserData(user_details)
-            registered(TRUE)
-            shinyjs::enable("nextBtnReg")
-            showModal(modalDialog(
-              title = "Registration Successful",
-              "Registration successful! Please log in.",
-              easyClose = TRUE,
-              footer = NULL
-            ))
-          } else {
-            showModal(modalDialog(
-              title = "Error",
-              "Passwords do not match. Please try again.",
-              easyClose = TRUE,
-              footer = NULL
-            ))
-          }
+        otp_attempts(otp_attempts() + 1)
+        output$preOtpStatus <- renderUI({
+          tags$p(style = "color: red;", paste("Incorrect OTP. Attempts remaining:", max_otp_attempts - otp_attempts()))
+        })
+        if (otp_attempts() >= max_otp_attempts) {
+          output$preOtpStatus <- renderUI({
+            tags$p(style = "color: red;", "Maximum OTP attempts reached. Please refresh the page.")
+          })
+          shinyjs::disable("verifyPreOTP")
+          shinyjs::disable("confirmSurveyBtn")
+        }
+      }
+    }
+  })
+
+  # OTP verification logic
+  observeEvent(input$verifyOTP, {
+    if (otp_attempts() < max_otp_attempts) {
+      if (input$otpInput == otp()) {
+        otp_verified(TRUE)
+        output$otpStatus <- renderUI({
+          tags$p(style ="color: green;", "OTP verified successfully!")
+        })
+        shinyjs::enable("nextToWelcomeChatbot")
+      } else {
+        otp_attempts(otp_attempts() + 1)
+        output$otpStatus <- renderUI({
+          tags$p(style = "color: red;", paste("Incorrect OTP. Attempts remaining:", max_otp_attempts - otp_attempts()))
+        })
+        if (otp_attempts() >= max_otp_attempts) {
+          output$otpStatus <- renderUI({
+            tags$p(style = "color: red;", "Maximum OTP attempts reached. Please refresh the page.")
+          })
+          shinyjs::disable("verifyOTP")
+        }
+      }
+    }
+  })
+
+  # Function to check if the user's input is on topic
+  checkUserInput <- function(input_text) {
+    if (!isCareerRelated(input_text, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")) {
+      showModal(modalDialog(
+        title = "Staying on Topic",
+        "We are having an essential conversation regarding your future career paths. This discussion will help you make informed decisions based on your interests, skills, and aspirations. Take your time to carefully consider your responses, as they will shape the recommendations and insights provided. Your career journey is unique, and this interactive session is designed to guide you toward opportunities that align with your goals. Stay engaged and explore the possibilities that await you!",
+        easyClose = TRUE,
+        footer = NULL
+      ))
+      return(FALSE)
+    }
+    return(TRUE)
+  }
+
+  observeEvent(input$registerBtn, {
+    required_fields <- c(input$first_name, input$last_name, input$username, input$reg_password,
+                         input$reg_password_reenter, input$email, input$school, input$year,
+                         input$gender, input$terms)
+
+    field_names <- c("First Name", "Last Name", "Username", "Password",
+                     "Re-enter Password", "Email", "School", "Year",
+                     "Gender Identity", "Terms and Conditions")
+
+    empty_fields <- field_names[sapply(required_fields, function(x) is.na(x) || x == "")]
+
+    if (length(empty_fields) > 0) {
+      showModal(modalDialog(
+        title = "Registration Warning",
+        paste("Please complete the following fields:", paste(empty_fields, collapse = ", ")),
+        easyClose = TRUE,
+        footer = NULL,
+        size = "m"
+      ))
+    } else {
+      if (input$terms) {
+        if (input$reg_password == input$reg_password_reenter) {
+          hashed_password <- digest(input$reg_password, algo = "sha256")
+          new_user <- data.frame(Username = input$username, Password = hashed_password, stringsAsFactors = FALSE)
+          user_details <<- rbind(user_details, new_user)
+          saveUserData(user_details)
+          registered(TRUE)
+          shinyjs::enable("nextBtnReg")
+          showModal(modalDialog(
+            title = "Registration Successful",
+            "Registration successful! Please log in.",
+            easyClose = TRUE,
+            footer = NULL
+          ))
         } else {
           showModal(modalDialog(
-            title = "Terms and Conditions",
-            "Agreement to the Terms and Conditions is required to proceed.",
+            title = "Error",
+            "Passwords do not match. Please try again.",
             easyClose = TRUE,
             footer = NULL
           ))
         }
-      }
-    })
-
-    output$registered <- reactive({ registered() })
-    outputOptions(output, "registered", suspendWhenHidden = FALSE)
-
-    output$loggedIn <- reactive({ loggedIn() })
-    outputOptions(output, "loggedIn", suspendWhenHidden = FALSE)
-
-    output$preSurveyCompleted <- reactive({ preSurveyCompleted() })
-    outputOptions(output, "preSurveyCompleted", suspendWhenHidden = FALSE)
-
-    observeEvent(input$confirmSurveyBtn, {
-      if (input$preSurveyCheck) {
+      } else {
         showModal(modalDialog(
-          title = "Survey Warning",
-          "Please uncheck the box before submitting.",
+          title = "Terms and Conditions",
+          "Agreement to the Terms and Conditions is required to proceed.",
           easyClose = TRUE,
           footer = NULL
         ))
-        return()
       }
-      if (pre_otp_verified()){
-        preSurveyCompleted(TRUE)
-        tabs_access(c(TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE))
-        updateTabsetPanel(session, "tabs", selected = "Introduction")
-      }
-    })
+    }
+  })
 
-    observeEvent(input$continueToQuestionnaire, {
-      tabs_access(c(TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE))
-      updateTabsetPanel(session, "tabs", selected = "Questionnaire")
-    })
+  output$registered <- reactive({ registered() })
+  outputOptions(output, "registered", suspendWhenHidden = FALSE)
 
-    observeEvent(input$loginBtn, {
-      req(input$login_username, input$login_password)
-      user <- user_details
-      if (nrow(user) > 0) {
-        showModal(modalDialog(
-          title = "Loading",
-          "Please wait while processing the request.",
-          easyClose = TRUE,
-          footer = NULL
-        ))
-        Sys.sleep(2)
-        hashed_login_password <- digest(input$login_password, algo = "sha256")
-        if (any(user$Username == input$login_username & user$Password == hashed_login_password)) {
-          loggedIn(TRUE)
-          resetChat()
-          tabs_access(c(TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE))
-        } else {
-          showModal(modalDialog(
-            title = "Login Error",
-            "Invalid credentials, please try again.",
-            easyClose = TRUE,
-            footer = NULL
-          ))
-        }
+  output$loggedIn <- reactive({ loggedIn() })
+  outputOptions(output, "loggedIn", suspendWhenHidden = FALSE)
+
+  output$preSurveyCompleted <- reactive({ preSurveyCompleted() })
+  outputOptions(output, "preSurveyCompleted", suspendWhenHidden = FALSE)
+
+  observeEvent(input$confirmSurveyBtn, {
+    if (input$preSurveyCheck) {
+      showModal(modalDialog(
+        title = "Survey Warning",
+        "Please uncheck the box before submitting.",
+        easyClose = TRUE,
+        footer = NULL
+      ))
+      return()
+    }
+    if (pre_otp_verified()){
+      preSurveyCompleted(TRUE)
+      tabs_access(c(TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE))
+      updateTabsetPanel(session, "tabs", selected = "Introduction")
+    }
+  })
+
+  observeEvent(input$continueToQuestionnaire, {
+    tabs_access(c(TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE))
+    updateTabsetPanel(session, "tabs", selected = "Questionnaire")
+  })
+
+  observeEvent(input$loginBtn, {
+    req(input$login_username, input$login_password)
+    user <- user_details
+    if (nrow(user) > 0) {
+      showModal(modalDialog(
+        title = "Loading",
+        "Please wait while processing the request.",
+        easyClose = TRUE,
+        footer = NULL
+      ))
+      Sys.sleep(2)
+      hashed_login_password <- digest(input$login_password, algo = "sha256")
+      if (any(user$Username == input$login_username & user$Password == hashed_login_password)) {
+        loggedIn(TRUE)
+        resetChat()
+        tabs_access(c(TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE))
       } else {
         showModal(modalDialog(
           title = "Login Error",
-          "No registered users found. Create an account to proceed.",
+          "Invalid credentials, please try again.",
           easyClose = TRUE,
           footer = NULL
         ))
       }
-    })
+    } else {
+      showModal(modalDialog(
+        title = "Login Error",
+        "No registered users found. Create an account to proceed.",
+        easyClose = TRUE,
+        footer = NULL
+      ))
+    }
+  })
 
-    observeEvent(input$navigateToRegistration, {
-      registered(TRUE)
-      loggedIn(FALSE)
-    })
+  observeEvent(input$navigateToRegistration, {
+    registered(TRUE)
+    loggedIn(FALSE)
+  })
 
-    observeEvent(input$navigateToLogin, {
-      registered(FALSE)
-      loggedIn(FALSE)
-    })
+  observeEvent(input$navigateToLogin, {
+    registered(FALSE)
+    loggedIn(FALSE)
+  })
 
-    resetChat <- function() {
-      current_question_index(1)
-      chat_history(data.frame(Role = character(), Message = character(), stringsAsFactors = FALSE))
-      chatbot_responses(data.frame(Question = character(), Response = character(), stringsAsFactors = FALSE))
-      recommended_careers(NULL)
-      predicted_career_paths(NULL)
-      questions <- generateCareerQuestions(api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")
-      randomized_questions(questions)
+  resetChat <- function() {
+    current_question_index(1)
+    chat_history(data.frame(Role = character(), Message = character(), stringsAsFactors = FALSE))
+    chatbot_responses(data.frame(Question = character(), Response = character(), stringsAsFactors = FALSE))
+    recommended_careers(NULL)
+    predicted_career_paths(NULL)
+    questions <- generateCareerQuestions(api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")
+    randomized_questions(questions)
+    askCareerQuestions()
+  }
+
+  askCareerQuestions <- function() {
+    if (current_question_index() <= length(randomized_questions())) {
+      question <- randomized_questions()[current_question_index()]
+      output$currentQuestion <- renderUI({
+        tags$div(
+          class = "rect-bubble",
+          question
+        )
+      })
+      current_question_index(current_question_index() + 1)
+    } else {
+      chat_history(rbind(chat_history(), data.frame(Role = "Bot", Message = "All questions answered! Please click the next button to see your predicted career paths.", stringsAsFactors = FALSE)))
+      output$predictedCareerPaths <- renderUI({
+        actionButton("nextToGlimpse", "Next to See Predicted Career Paths", class = "btn-primary")
+      })
+      recommendCareers()
+    }
+  }
+
+  output$errorMessage <- renderUI({
+    req(input$chatbotAnswerInput)
+    if (is.character(chat_history()) && nrow(chat_history()) > 0 &&
+        chat_history()$Role[nrow(chat_history())] == "User") {
+      last_question <- tail(chat_history()$Message, 1)
+      answer_text <- input$chatbotAnswerInput
+      if (!isCareerRelated(answer_text, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")) {
+        return(tags$div(class = "rect-bubble",
+                        paste("The question asked was not answered:", last_question)))
+      }
+    }
+    return(NULL)
+  })
+
+  observeEvent(input$submitAnswerBtn, {
+    req(input$chatbotAnswerInput)
+
+    answer_text <- input$chatbotAnswerInput
+
+    if (answer_text == "") {
+      showModal(modalDialog(
+        title = "Input Warning",
+        "Please answer Question #", current_question_index() - 1,
+        easyClose = TRUE,
+        footer = NULL
+      ))
+      return()
+    }
+
+    # Check word count
+    word_count <- str_count(answer_text, "\\S+")
+    if (word_count < 3 || word_count > 120) {
+      showModal(modalDialog(
+        title = "Word Count Warning",
+        "Please ensure your answer is between 3 to 120 words.",
+        easyClose = TRUE,
+        footer = NULL
+      ))
+      return()
+    }
+
+    # Check if input is on topic
+    if (!checkUserInput(answer_text)) {
+      return()
+    }
+
+    # Update chat history for user input
+    chat_history(rbind(chat_history(), data.frame(Role = "User", Message = answer_text, stringsAsFactors = FALSE)))
+
+    # Only call askCareerQuestions if the current index is valid
+    if (current_question_index() > 10) {
+      showModal(modalDialog(
+        title = "Error",
+        "Please ensure you answer all questions to see the predicted career paths.",
+        easyClose = TRUE,
+        footer = NULL
+      ))
+    } else {
       askCareerQuestions()
     }
 
-    askCareerQuestions <- function() {
-      if (current_question_index() <= length(randomized_questions())) {
-        question <- randomized_questions()[current_question_index()]
-        output$currentQuestion <- renderUI({
-          tags$div(
-            class = "rect-bubble",
-            question
-          )
-        })
-        current_question_index(current_question_index() + 1)
-      } else {
-        chat_history(rbind(chat_history(), data.frame(Role = "Bot", Message = "All questions answered! Please click the next button to see your predicted career paths.", stringsAsFactors = FALSE)))
-        output$predictedCareerPaths <- renderUI({
-          actionButton("nextToGlimpse", "Next to See Predicted Career Paths", class = "btn-primary")
-        })
-        recommendCareers()
-      }
+    updateTextAreaInput(session, "chatbotAnswerInput", value = "")
+  })
+
+  output$questionsProgress <- renderUI({
+    answered <- current_question_index() - 1
+    total <- length(randomized_questions())
+    progress <- round((answered / total) * 100)
+
+    tags$div(class = "progress-box",
+             tags$div(style = "border-radius: 10px; width: 100%; background-color: #f1f1f1;",
+                      tags$div(style = paste0("width: ", progress, "%; background-color: #007bff; color: white; text-align: center; border-radius: 10px;"),
+                               paste0(progress, "%"))
+             )
+    )
+  })
+
+  output$predictedCareerPaths <- renderUI({
+    if (current_question_index() == (length(randomized_questions()) + 1)) {
+      actionButton("nextToGlimpse", "Next to See Predicted Career Paths", class = "btn-primary")
+    }
+  })
+
+  observeEvent(input$nextToGlimpse, {
+    user_answers <- unlist(chat_history()[chat_history()$Role == "User", "Message"])
+    predicted_career_paths(predictCareerPaths(user_answers, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ"))
+    user_career_paths(rbind(user_career_paths(), data.frame(Date = Sys.Date(), Career_Path = paste(predicted_career_paths(), collapse = ", "), stringsAsFactors = FALSE)))
+
+    tabs_access(c(TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE))
+    updateTabsetPanel(session, "tabs", selected = "Quick Glimpse")
+  })
+
+  output$predictedCareerPathsTableOutput <- renderPrint({
+    req(predicted_career_paths())
+
+    df <- data.frame(Career_Path = unlist(strsplit(paste(predicted_career_paths(), collapse = "   "), ",")), stringsAsFactors = FALSE)
+
+    df$Career_Path <- sapply(df$Career_Path, clean_text)
+
+    styled_output <- paste("<span style='font-size:20px;'>", df$Career_Path, "</span>", collapse = "<br>")
+    HTML(styled_output)
+  })
+
+  output$downloadCareerPaths <- downloadHandler(
+    filename = function() {
+      paste("predicted_career_paths_", Sys.Date(), ".csv", sep = "")
+    },
+    content = function(file) {
+      write.csv(predicted_career_paths(), file, row.names = FALSE)
+    }
+  );
+
+  output$userInputUI <- renderUI({
+    if (input$input_method == "audio") {
+      textAreaInput("userInputAudio", "Ask your question via Audio:", placeholder = "Audio input...", rows = 4)
+    } else {
+      textAreaInput("userInput", "Ask your question here:", placeholder = "Type your question here...", rows = 4)
+    }
+  })
+
+  observeEvent(input$askSalaryQuestions, {
+    job_title_input <- input$job_title
+    experience_level <- input$experience
+
+    if (!is.null(job_title_input) && !is.null(experience_level)) {
+      response <- predictSalary(job_title_input, experience_level, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")
+      salary_responses(rbind(salary_responses(), data.frame(Job_Title = job_title_input, Experience_Level = experience_level, Response = response, stringsAsFactors = FALSE)))
+    }
+  })
+
+  output$salaryResponsesTable <- renderDT({
+    salary_responses()
+  }, options = list(pageLength = 10, autoWidth = TRUE));
+
+  observe({
+    updateSelectInput(session, "job_title", choices = predicted_career_paths())
+  })
+
+  output$downloadSalaryResponses <- downloadHandler(
+    filename = function() {
+      paste("salary_responses_", Sys.Date(), ".csv", sep = "")
+    },
+    content = function(file) {
+      write.csv(salary_responses(), file, row.names = FALSE)
+    }
+  )
+
+  output$downloadChatbotResponses <- downloadHandler(
+    filename = function() {
+      paste("chatbot_responses_", Sys.Date(), ".csv", sep = "")
+    },
+    content = function(file) {
+      write.csv(chatbot_responses(), file, row.names = FALSE)
+    }
+  )
+
+  observeEvent(input$askQuestionBtn, {
+    req(input$userInput)
+
+    user_text <- input$userInput
+    predicted_paths <- predicted_career_paths()
+
+    response_data <- connectCareerToChatbot(user_text, predicted_paths, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")
+
+    chat_history(rbind(chat_history(), data.frame(Role = "User", Message = user_text, stringsAsFactors = FALSE)))
+
+    if (!is.null(response_data$warning)) {
+      chat_history(rbind(chat_history(), data.frame(Role = "Bot", Message = response_data$warning, stringsAsFactors = FALSE)))
     }
 
-    output$errorMessage <- renderUI({
-      req(input$chatbotAnswerInput)
-      if (is.character(chat_history()) && nrow(chat_history()) > 0 &&
-          chat_history()$Role[nrow(chat_history())] == "User") {
-        last_question <- tail(chat_history()$Message, 1)
-        answer_text <- input$chatbotAnswerInput
-        if (!isCareerRelated(answer_text, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")) {
-          return(tags$div(class = "rect-bubble",
-                          paste("The question asked was not answered:", last_question)))
-        }
-      }
-      return(NULL)
+    chat_history(rbind(chat_history(), data.frame(Role = "Bot", Message = response_data$response, stringsAsFactors = FALSE)))
+    chatbot_responses(rbind(chatbot_responses(), data.frame(Question = user_text, Response = response_data$response, stringsAsFactors = FALSE)))
+
+    user_chat_history(rbind(user_chat_history(), data.frame(Date = Sys.Date(), Chat = user_text, stringsAsFactors = FALSE)))
+
+    session$sendCustomMessage("speak", response_data$response)
+
+    updateTextAreaInput(session, "userInput", value = "")
+  });
+
+  output$chatOutputResponses <- renderDT({
+    datatable(chatbot_responses()[nrow(chatbot_responses()):1, ], options = list(pageLength = 5, autoWidth = TRUE)) %>%
+                formatStyle(
+                  'Response',
+                  'margin-bottom' = '10px'
+                )
+  });
+
+  observeEvent(input$nextToWelcomeChatbot, {
+    updateTabsetPanel(session, "tabs", selected = "Welcome to Chatbot");
+  })
+
+  observeEvent(input$nextToGeminiChatbot, {
+    updateTabsetPanel(session, "tabs", selected = "Ask Question Gemini Chatbot");
+  })
+
+  observeEvent(input$nextToSalaryInstructions, {
+    updateTabsetPanel(session, "tabs", selected = "Salary Instructions");
+  })
+
+  observeEvent(input$nextToSalaryPage, {
+    updateTabsetPanel(session, "tabs", selected = "Salary Prediction");
+  })
+
+  observeEvent(input$nextToCulmination, {
+    updateTabsetPanel(session, "tabs", selected = "Culmination of CVS Responses");
+  })
+
+  observeEvent(input$viewCareerPaths, {
+    output$dashboardOutput <- renderUI({
+      DT::datatable(user_career_paths(), options = list(pageLength = 10, autoWidth = TRUE))
     })
+  })
 
-    observeEvent(input$submitAnswerBtn, {
-      req(input$chatbotAnswerInput)
+  output$chatHistoryTable <- renderDT({
+    req(user_chat_history())
+    datatable(user_chat_history(), options = list(pageLength = 5, autoWidth = TRUE))
+  })
 
-      answer_text <- input$chatbotAnswerInput
+  output$salaryResponsesHistoryTable <- renderDT({
+    req(salary_responses())
+    datatable(salary_responses(), options = list(pageLength = 5, autoWidth = TRUE))
+  })
 
-      if (answer_text == "") {
-        showModal(modalDialog(
-          title = "Input Warning",
-          "Please answer Question #", current_question_index() - 1,
-          easyClose = TRUE,
-          footer = NULL
-        ))
-        return()
-      }
+  output$voiceControls <- renderUI({
+    if (input$input_method == "audio") {
+      tags$div(
+        actionButton("startVoiceBtn", "Start Voice Input", class = "btn-primary"),
+        actionButton("stopVoiceBtn", "Stop Voice Input", class = "btn-danger"),
+        tags$div(id = "stopwatch", "00:00:00"),
+        tags$script(HTML("
+          let recognition;
+          let final_transcript = '';
+          let timerInterval;
+          let stopwatchRunning = false;
+          let totalSeconds = 0;
 
-      # Check word count
-      word_count <- str_count(answer_text, "\\S+")
-      if (word_count < 3 || word_count > 120) {
-        showModal(modalDialog(
-          title = "Word Count Warning",
-          "Please ensure your answer is between 3 to 120 words.",
-          easyClose = TRUE,
-          footer = NULL
-        ))
-        return()
-      }
+          function startRecognition() {
+            recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+            recognition.continuous = false;
+            recognition.interimResults = false;
 
-      # Check if input is on topic
-      if (!checkUserInput(answer_text)) {
-        return()
-      }
+            recognition.onresult = function(event) {
+              final_transcript = event.results[0][0].transcript;
+              Shiny.setInputValue('voice_input', final_transcript);
+              respondToUser(final_transcript);
+            };
 
-      # Update chat history for user input
-      chat_history(rbind(chat_history(), data.frame(Role = "User", Message = answer_text, stringsAsFactors = FALSE)))
+            recognition.onerror = function(event) {
+              console.error('Recognition error', event.error);
+            };
 
-      # Only call askCareerQuestions if the current index is valid
-      if (current_question_index() > 10) {
-        showModal(modalDialog(
-          title = "Error",
-          "Please ensure you answer all questions to see the predicted career paths.",
-          easyClose = TRUE,
-          footer = NULL
-        ))
-      } else {
-        askCareerQuestions()
-      }
+            recognition.onend = function() {
+            };
 
-      updateTextAreaInput(session, "chatbotAnswerInput", value = "")
-    })
+            recognition.start();
+            startStopwatch();
+          }
 
-    output$questionsProgress <- renderUI({
-      answered <- current_question_index() - 1
-      total <- length(randomized_questions())
-      progress <- round((answered / total) * 100)
+          function stopRecognition() {
+            if (recognition && recognition.stop) {
+              recognition.stop();
+            }
+            clearInterval(timerInterval);
+            stopwatchRunning = false;
+          }
 
-      tags$div(class = "progress-box",
-               tags$div(style = "border-radius: 10px; width: 100%; background-color: #f1f1f1;",
-                        tags$div(style = paste0("width: ", progress, "%; background-color: #007bff; color: white; text-align: center; border-radius: 10px;"),
-                                 paste0(progress, "%"))
-               )
+          function startStopwatch() {
+            if (!stopwatchRunning) {
+              totalSeconds = 0;
+              timerInterval = setInterval(updateStopwatch, 1000);
+              stopwatchRunning = true;
+            }
+          }
+
+          function updateStopwatch() {
+            totalSeconds++;
+            let hours = Math.floor(totalSeconds / 3600);
+            let minutes = Math.floor((totalSeconds % 3600) / 60);
+            let seconds = totalSeconds % 60;
+            document.getElementById('stopwatch').innerHTML =
+              (hours < 10 ? '0' + hours : hours) + ':' +
+              (minutes < 10 ? '0' + minutes : minutes) + ':' +
+              (seconds < 10 ? '0' + seconds : seconds);
+          }
+
+          function respondToUser(input) {
+            Shiny.setInputValue('userInput', input);
+            Shiny.setInputValue('askQuestionBtn', Math.random());
+          }
+
+          Shiny.addCustomMessageHandler('startRecognition', function(message) {
+            startRecognition();
+          });
+
+          Shiny.addCustomMessageHandler('stopRecognition', function(message) {
+            stopRecognition();
+          });
+        "))
       )
-    })
+    } else {
+      tags$div()
+    }
+  })
 
-    output$predictedCareerPaths <- renderUI({
-      if (current_question_index() == (length(randomized_questions()) + 1)) {
-        actionButton("nextToGlimpse", "Next to See Predicted Career Paths", class = "btn-primary")
-      }
-    })
+  observeEvent(input$startVoiceBtn, {
+    session$sendCustomMessage("startRecognition", list())
+  })
 
-    observeEvent(input$nextToGlimpse, {
-      user_answers <- unlist(chat_history()[chat_history()$Role == "User", "Message"])
-      predicted_career_paths(predictCareerPaths(user_answers, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ"))
-      user_career_paths(rbind(user_career_paths(), data.frame(Date = Sys.Date(), Career_Path = paste(predicted_career_paths(), collapse = ", "), stringsAsFactors = FALSE)))
+  observeEvent(input$stopVoiceBtn, {
+    session$sendCustomMessage("stopRecognition", list())
+  })
 
-      tabs_access(c(TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE))
-      updateTabsetPanel(session, "tabs", selected = "Quick Glimpse")
-    })
-
-    output$predictedCareerPathsTableOutput <- renderPrint({
-      req(predicted_career_paths())
-
-      df <- data.frame(Career_Path = unlist(strsplit(paste(predicted_career_paths(), collapse = "   "), ",")), stringsAsFactors = FALSE)
-
-      df$Career_Path <- sapply(df$Career_Path, clean_text)
-
-      styled_output <- paste("<span style='font-size:20px;'>", df$Career_Path, "</span>", collapse = "<br>")
-      HTML(styled_output)
-    })
-
-    output$downloadCareerPaths <- downloadHandler(
-      filename = function() {
-        paste("predicted_career_paths_", Sys.Date(), ".csv", sep = "")
-      },
-      content = function(file) {
-        write.csv(predicted_career_paths(), file, row.names = FALSE)
-      }
-    );
-
-    output$userInputUI <- renderUI({
-      if (input$input_method == "audio") {
-        textAreaInput("userInputAudio", "Ask your question via Audio:", placeholder = "Audio input...", rows = 4)
+  observe({
+    disable <- !tabs_access()
+    for (i in seq_along(disable)) {
+      if (isTRUE(disable[i])) {
+        shinyjs::disable(paste0("tabs", i))
       } else {
-        textAreaInput("userInput", "Ask your question here:", placeholder = "Type your question here...", rows = 4)
+        shinyjs::enable(paste0("tabs", i))
       }
-    })
+    }
+  })
 
-    observeEvent(input$askSalaryQuestions, {
-      job_title_input <- input$job_title
-      experience_level <- input$experience
+  # Privacy Policy Modal
+  observeEvent(input$privacyPolicyClicked, {
+    showModal(modalDialog(
+      title = "Privacy Policy",
+      tags$p("1. Introduction"),
+      tags$p("Personal information privacy is a priority. This Privacy Policy outlines how personal data is collected, used, disclosed, and safeguarded when using our website and chatbot."),
+      tags$p("2. Information We Collect"),
+      tags$p("2.1 Personal Information"),
+      tags$p("Personal information may be collected voluntarily through interactions with the chatbot."),
+      tags$p("2.2 Usage Data"),
+      tags$p("Certain information about website and chatbot usage is automatically collected."),
+      tags$p("2.3 Cookies"),
+      tags$p("Cookies and similar technologies enhance the user experience. Cookie preferences can be managed through browser settings."),
+      tags$p("3. How We Use Your Information"),
+      tags$p("3.1 To Provide Services"),
+      tags$p("Personal information is used to operate and maintain website and chatbot services."),
+      tags$p("3.2 To Improve Services"),
+      tags$p("Information usage allows understanding and improvement of chatbot features."),
+      tags$p("3.3 To Communicate"),
+      tags$p("Contact information may be used to send updates and promotional materials."),
+      tags$p("3.4 For Security"),
+      tags$p("Information is utilized to detect and prevent unauthorized access."),
+      tags$p("4. Information Sharing and Disclosure"),
+      tags$p("Information will not be shared except with the research team. De-identified data may be published in research papers."),
+      tags$p("5. Data Security"),
+      tags$p("Technical and organizational measures are implemented to protect personal information."),
+      tags$p("6. Your Data Rights"),
+      tags$p("6.1 Access and Correction"),
+      tags$p("Request access to or correction of personal information by contacting us."),
+      tags$p("6.2 Deletion"),
+      tags$p("Request deletion of personal information, subject to legal obligations."),
+      tags$p("6.3 Data Portability"),
+      tags$p("Request a copy of personal data in a structured format."),
+      tags$p("7. Third-Party Links"),
+      tags$p("Links to third-party websites are not the responsibility of the site."),
+      tags$p("8. Changes to This Privacy Policy"),
+      tags$p("Policy updates will be posted on this page."),
+      footer = modalButton("Close")
+    ))
+  })
 
-      if (!is.null(job_title_input) && !is.null(experience_level)) {
-        response <- predictSalary(job_title_input, experience_level, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")
-        salary_responses(rbind(salary_responses(), data.frame(Job_Title = job_title_input, Experience_Level = experience_level, Response = response, stringsAsFactors = FALSE)))
-      }
-    })
+  # Terms and Conditions Modal
+  observeEvent(input$termsAndConditionsClicked, {
+    showModal(modalDialog(
+      title = "Terms and Conditions",
+      tags$p("1. Acceptance of Terms"),
+      tags$p("By accessing and using this website and chatbot services, compliance with terms is required."),
+      tags$p("2. Use of Services"),
+      tags$p("2.1 Eligibility"),
+      tags$p("Age requirement is 18 or parental/guardian consent."),
+      tags$p("2.2 Purpose"),
+      tags$p("This chatbot serves as a career guidance tool."),
+      tags$p("2.3 Personal Use"),
+      tags$p("Use of services is for personal purposes only."),
+      tags$p("3. User Conduct"),
+      tags$p("3.1 Prohibited Activities"),
+      tags$p("Users must refrain from unlawful activities."),
+      tags$p("3.2 Content Submission"),
+      tags$p("Submitted content must be lawful."),
+      tags$p("4. Privacy and Data Protection"),
+      tags$p("4.1 Data Collection"),
+      tags$p("Personal data is handled per the Privacy Policy."),
+      tags$p("4.2 Confidentiality"),
+      tags$p("Confidentiality of user information is prioritized."),
+      tags$p("5. Intellectual Property"),
+      tags$p("5.1 Ownership"),
+      tags$p("All website content is owned or licensed to us."),
+      tags$p("6. Disclaimer of Warranties"),
+      tags$p("6.1 As-Is Basis"),
+      tags$p("Services are provided 'as-is' without warranties."),
+      tags$p("6.2 Information Accuracy"),
+      tags$p("Verification from additional sources is encouraged."),
+      tags$p("7. Limitation of Liability"),
+      tags$p("Limitation on liability is to the maximum extent allowed by law."),
+      tags$p("8. Modifications to Terms"),
+      tags$p("Terms may change at any time."),
+      tags$p("9. Termination"),
+      tags$p("Access to the website may be terminated without notice."),
+      tags$p("10. Information Accuracy Disclaimer"),
+      tags$p("The chatbot provides useful information but may not reflect the latest industry updates."),
+      footer = modalButton("Close")
+    ))
+  })
 
-    output$salaryResponsesTable <- renderDT({
-      salary_responses()
-    }, options = list(pageLength = 10, autoWidth = TRUE));
+  # New Interactive Career Path Visualization Logic
+  output$careerPathSelector <- renderUI({
+    req(predicted_career_paths())
+    selectInput("selected_career", "Select a Career Path", choices = predicted_career_paths(), selected = predicted_career_paths()[1])
+  })
 
-    observe({
-      updateSelectInput(session, "job_title", choices = predicted_career_paths())
-    })
+  output$careerPathNetwork <- renderVisNetwork({
+    req(input$selected_career)
+    selected_career <- input$selected_career
+    career_steps <- getCareerPathSteps(selected_career, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")
 
-    output$downloadSalaryResponses <- downloadHandler(
-      filename = function() {
-        paste("salary_responses_", Sys.Date(), ".csv", sep = "")
-      },
-      content = function(file) {
-        write.csv(salary_responses(), file, row.names = FALSE)
-      }
-    )
+    # Create nodes and edges
+    nodes <- data.frame(id = 1:length(career_steps), label = career_steps, stringsAsFactors = FALSE)
+    edges <- data.frame(from = c(rep(1, length(career_steps) - 1)), to = 2:length(career_steps))
 
-    output$downloadChatbotResponses <- downloadHandler(
-      filename = function() {
-        paste("chatbot_responses_", Sys.Date(), ".csv", sep = "")
-      },
-      content = function(file) {
-        write.csv(chatbot_responses(), file, row.names = FALSE)
-      }
-    )
+    visNetwork(nodes, edges) %>%
+      visNodes(shape = "box") %>%
+      visEdges(arrows = "to") %>%
+      visOptions(highlightNearest = TRUE) %>%
+      visLayout(randomSeed = 123)
+  })
 
-    observeEvent(input$askQuestionBtn, {
-      req(input$userInput)
+  # Observer for Moving to the Post Survey
+  observeEvent(input$nextToPostSurvey, {
+    updateTabsetPanel(session, "tabs", selected = "Post Survey")
+  })
+}
 
-      user_text <- input$userInput
-      predicted_paths <- predicted_career_paths()
-
-      response_data <- connectCareerToChatbot(user_text, predicted_paths, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")
-
-      chat_history(rbind(chat_history(), data.frame(Role = "User", Message = user_text, stringsAsFactors = FALSE)))
-
-      if (!is.null(response_data$warning)) {
-        chat_history(rbind(chat_history(), data.frame(Role = "Bot", Message = response_data$warning, stringsAsFactors = FALSE)))
-      }
-
-      chat_history(rbind(chat_history(), data.frame(Role = "Bot", Message = response_data$response, stringsAsFactors = FALSE)))
-      chatbot_responses(rbind(chatbot_responses(), data.frame(Question = user_text, Response = response_data$response, stringsAsFactors = FALSE)))
-
-      user_chat_history(rbind(user_chat_history(), data.frame(Date = Sys.Date(), Chat = user_text, stringsAsFactors = FALSE)))
-
-      session$sendCustomMessage("speak", response_data$response)
-
-      updateTextAreaInput(session, "userInput", value = "")
-    });
-
-    output$chatOutputResponses <- renderDT({
-      datatable(chatbot_responses()[nrow(chatbot_responses()):1, ], options = list(pageLength = 5, autoWidth = TRUE)) %>%
-                  formatStyle(
-                    'Response',
-                    'margin-bottom' = '10px'
-                  )
-    });
-
-    observeEvent(input$nextToWelcomeChatbot, {
-      updateTabsetPanel(session, "tabs", selected = "Welcome to Chatbot");
-    })
-
-    observeEvent(input$nextToGeminiChatbot, {
-      updateTabsetPanel(session, "tabs", selected = "Ask Question Gemini Chatbot");
-    })
-
-    observeEvent(input$nextToSalaryInstructions, {
-      updateTabsetPanel(session, "tabs", selected = "Salary Instructions");
-    })
-
-    observeEvent(input$nextToSalaryPage, {
-      updateTabsetPanel(session, "tabs", selected = "Salary Prediction");
-    })
-
-    observeEvent(input$nextToEndSession, {
-      updateTabsetPanel(session, "tabs", selected = "Session Completed");
-    })
-
-    observeEvent(input$viewCareerPaths, {
-      output$dashboardOutput <- renderUI({
-        DT::datatable(user_career_paths(), options = list(pageLength = 10, autoWidth = TRUE))
-      })
-    })
-
-    output$chatHistoryTable <- renderDT({
-      req(user_chat_history())
-      datatable(user_chat_history(), options = list(pageLength = 5, autoWidth = TRUE))
-    })
-
-    output$salaryResponsesHistoryTable <- renderDT({
-      req(salary_responses())
-      datatable(salary_responses(), options = list(pageLength = 5, autoWidth = TRUE))
-    })
-
-    output$voiceControls <- renderUI({
-      if (input$input_method == "audio") {
-        tags$div(
-          actionButton("startVoiceBtn", "Start Voice Input", class = "btn-primary"),
-          actionButton("stopVoiceBtn", "Stop Voice Input", class = "btn-danger"),
-          tags$div(id = "stopwatch", "00:00:00"),
-          tags$script(HTML("
-            let recognition;
-            let final_transcript = '';
-            let timerInterval;
-            let stopwatchRunning = false;
-            let totalSeconds = 0;
-
-            function startRecognition() {
-              recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-              recognition.continuous = false;
-              recognition.interimResults = false;
-
-              recognition.onresult = function(event) {
-                final_transcript = event.results[0][0].transcript;
-                Shiny.setInputValue('voice_input', final_transcript);
-                respondToUser(final_transcript);
-              };
-
-              recognition.onerror = function(event) {
-                console.error('Recognition error', event.error);
-              };
-
-              recognition.onend = function() {
-              };
-
-              recognition.start();
-              startStopwatch();
-            }
-
-            function stopRecognition() {
-              if (recognition && recognition.stop) {
-                recognition.stop();
-              }
-              clearInterval(timerInterval);
-              stopwatchRunning = false;
-            }
-
-            function startStopwatch() {
-              if (!stopwatchRunning) {
-                totalSeconds = 0;
-                timerInterval = setInterval(updateStopwatch, 1000);
-                stopwatchRunning = true;
-              }
-            }
-
-            function updateStopwatch() {
-              totalSeconds++;
-              let hours = Math.floor(totalSeconds / 3600);
-              let minutes = Math.floor((totalSeconds % 3600) / 60);
-              let seconds = totalSeconds % 60;
-              document.getElementById('stopwatch').innerHTML =
-                (hours < 10 ? '0' + hours : hours) + ':' +
-                (minutes < 10 ? '0' + minutes : minutes) + ':' +
-                (seconds < 10 ? '0' + seconds : seconds);
-            }
-
-            function respondToUser(input) {
-              Shiny.setInputValue('userInput', input);
-              Shiny.setInputValue('askQuestionBtn', Math.random());
-            }
-
-            Shiny.addCustomMessageHandler('startRecognition', function(message) {
-              startRecognition();
-            });
-
-            Shiny.addCustomMessageHandler('stopRecognition', function(message) {
-              stopRecognition();
-            });
-          "))
-        )
-      } else {
-        tags$div()
-      }
-    })
-
-    observeEvent(input$startVoiceBtn, {
-      session$sendCustomMessage("startRecognition", list())
-    })
-
-    observeEvent(input$stopVoiceBtn, {
-      session$sendCustomMessage("stopRecognition", list())
-    })
-
-    observe({
-      disable <- !tabs_access()
-      for (i in seq_along(disable)) {
-        if (isTRUE(disable[i])) {
-          shinyjs::disable(paste0("tabs", i))
-        } else {
-          shinyjs::enable(paste0("tabs", i))
-        }
-      }
-    })
-
-    # Privacy Policy Modal
-    observeEvent(input$privacyPolicyClicked, {
-      showModal(modalDialog(
-        title = "Privacy Policy",
-        tags$p("1. Introduction"),
-        tags$p("Personal information privacy is a priority. This Privacy Policy outlines how personal data is collected, used, disclosed, and safeguarded when using our website and chatbot."),
-        tags$p("2. Information We Collect"),
-        tags$p("2.1 Personal Information"),
-        tags$p("Personal information may be collected voluntarily through interactions with the chatbot."),
-        tags$p("2.2 Usage Data"),
-        tags$p("Certain information about website and chatbot usage is automatically collected."),
-        tags$p("2.3 Cookies"),
-        tags$p("Cookies and similar technologies enhance the user experience. Cookie preferences can be managed through browser settings."),
-        tags$p("3. How We Use Your Information"),
-        tags$p("3.1 To Provide Services"),
-        tags$p("Personal information is used to operate and maintain website and chatbot services."),
-        tags$p("3.2 To Improve Services"),
-        tags$p("Information usage allows understanding and improvement of chatbot features."),
-        tags$p("3.3 To Communicate"),
-        tags$p("Contact information may be used to send updates and promotional materials."),
-        tags$p("3.4 For Security"),
-        tags$p("Information is utilized to detect and prevent unauthorized access."),
-        tags$p("4. Information Sharing and Disclosure"),
-        tags$p("Information will not be shared except with the research team. De-identified data may be published in research papers."),
-        tags$p("5. Data Security"),
-        tags$p("Technical and organizational measures are implemented to protect personal information."),
-        tags$p("6. Your Data Rights"),
-        tags$p("6.1 Access and Correction"),
-        tags$p("Request access to or correction of personal information by contacting us."),
-        tags$p("6.2 Deletion"),
-        tags$p("Request deletion of personal information, subject to legal obligations."),
-        tags$p("6.3 Data Portability"),
-        tags$p("Request a copy of personal data in a structured format."),
-        tags$p("7. Third-Party Links"),
-        tags$p("Links to third-party websites are not the responsibility of the site."),
-        tags$p("8. Changes to This Privacy Policy"),
-        tags$p("Policy updates will be posted on this page."),
-        footer = modalButton("Close")
-      ))
-    })
-
-    # Terms and Conditions Modal
-    observeEvent(input$termsAndConditionsClicked, {
-      showModal(modalDialog(
-        title = "Terms and Conditions",
-        tags$p("1. Acceptance of Terms"),
-        tags$p("By accessing and using this website and chatbot services, compliance with terms is required."),
-        tags$p("2. Use of Services"),
-        tags$p("2.1 Eligibility"),
-        tags$p("Age requirement is 18 or parental/guardian consent."),
-        tags$p("2.2 Purpose"),
-        tags$p("This chatbot serves as a career guidance tool."),
-        tags$p("2.3 Personal Use"),
-        tags$p("Use of services is for personal purposes only."),
-        tags$p("3. User Conduct"),
-        tags$p("3.1 Prohibited Activities"),
-        tags$p("Users must refrain from unlawful activities."),
-        tags$p("3.2 Content Submission"),
-        tags$p("Submitted content must be lawful."),
-        tags$p("4. Privacy and Data Protection"),
-        tags$p("4.1 Data Collection"),
-        tags$p("Personal data is handled per the Privacy Policy."),
-        tags$p("4.2 Confidentiality"),
-        tags$p("Confidentiality of user information is prioritized."),
-        tags$p("5. Intellectual Property"),
-        tags$p("5.1 Ownership"),
-        tags$p("All website content is owned or licensed to us."),
-        tags$p("6. Disclaimer of Warranties"),
-        tags$p("6.1 As-Is Basis"),
-        tags$p("Services are provided 'as-is' without warranties."),
-        tags$p("6.2 Information Accuracy"),
-        tags$p("Verification from additional sources is encouraged."),
-        tags$p("7. Limitation of Liability"),
-        tags$p("Limitation on liability is to the maximum extent allowed by law."),
-        tags$p("8. Modifications to Terms"),
-        tags$p("Terms may change at any time."),
-        tags$p("9. Termination"),
-        tags$p("Access to the website may be terminated without notice."),
-        tags$p("10. Information Accuracy Disclaimer"),
-        tags$p("The chatbot provides useful information but may not reflect the latest industry updates."),
-        footer = modalButton("Close")
-      ))
-    })
-
-    # New Interactive Career Path Visualization Logic
-    output$careerPathSelector <- renderUI({
-      req(predicted_career_paths())
-      selectInput("selected_career", "Select a Career Path", choices = predicted_career_paths(), selected = predicted_career_paths()[1])
-    })
-
-    output$careerPathNetwork <- renderVisNetwork({
-      req(input$selected_career)
-      selected_career <- input$selected_career
-      career_steps <- getCareerPathSteps(selected_career, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")
-
-      # Create nodes and edges
-      nodes <- data.frame(id = 1:length(career_steps), label = career_steps, stringsAsFactors = FALSE)
-      edges <- data.frame(from = c(rep(1, length(career_steps) - 1)), to = 2:length(career_steps))
-
-      visNetwork(nodes, edges) %>%
-        visNodes(shape = "box") %>%
-        visEdges(arrows = "to") %>%
-        visOptions(highlightNearest = TRUE) %>%
-        visLayout(randomSeed = 123)
-    })
-
-    # Observer for Moving to the Post Survey
-    observeEvent(input$nextToPostSurvey, {
-      updateTabsetPanel(session, "tabs", selected = "Post Survey")
-    })
-
-    # New Observer Function for Navigation to Culmination from Salary Prediction
-    observeEvent(input$nextToCulmination, {
-      updateTabsetPanel(session, "tabs", selected = "Culmination of CVS Responses")
-    })
-  }
-
-shinyApp(ui,server)
+shinyApp(ui, server)
