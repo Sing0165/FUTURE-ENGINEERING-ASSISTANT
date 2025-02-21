@@ -467,6 +467,7 @@ ui <- fluidPage(
                 )
     )
   )
+)
 
 server <- function(input, output, session) {
   chat_history <- reactiveVal(data.frame(Role = character(), Message = character(), stringsAsFactors = FALSE))
