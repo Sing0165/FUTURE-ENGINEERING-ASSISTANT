@@ -412,8 +412,19 @@ ui <- fluidPage(
                                       actionButton("loadingSalaryResponse", "Waiting for Response...", loading = TRUE, style = "display: none;"),
                                       plotlyOutput("salary_histogram"),
                                       plotlyOutput("salary_boxplot"),
-                                      actionButton("nextToEndSession", "Next to End Session", class = "btn-primary")
+                                      actionButton("nextToCulmination", "Next to Culmination of CVS Responses", class = "btn-primary")
                              )
+                           )
+                         )
+                ),
+
+                tabPanel("Culmination of CVS Responses",
+                         fluidPage(
+                           titlePanel(tags$div(class = "header-box", "Culmination of CVS Responses")),
+                           tags$div(class = "completion-box",
+                                    h2("Summary of Your Career Exploration"),
+                                    p("This page concludes your exploration into career choices, providing an overview of your predicted career paths, chatbot responses, and salary information gathered during the session. Reviewing these insights allows you to make informed decisions about your future career trajectory as you assess various opportunities."),
+                                    p("You may revisit your selected career paths, revisit any chatbot interactions, and reflect on the financial implications of your choices. This holistic overview serves to empower you as you navigate your academic and professional journey towards a fulfilling engineering career.")
                            )
                          )
                 ),
@@ -456,7 +467,7 @@ ui <- fluidPage(
                 )
     )
   )
-)
+
 server <- function(input, output, session) {
   chat_history <- reactiveVal(data.frame(Role = character(), Message = character(), stringsAsFactors = FALSE))
   registered <- reactiveVal(FALSE)
