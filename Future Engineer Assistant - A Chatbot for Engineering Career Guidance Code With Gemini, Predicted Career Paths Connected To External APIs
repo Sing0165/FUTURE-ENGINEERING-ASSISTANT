@@ -146,7 +146,7 @@ ui <- fluidPage(
   # Title Section
   tags$div(class = "bubble-title", "Future Engineer Assistant"),
   #tags$div(img(src = "cute_robot_logo.png", height = "100px", align = "center")),
-
+  
   # Login/Registration/Main App
   conditionalPanel(
     condition = "!output.preSurveyCompleted",
@@ -280,7 +280,7 @@ ui <- fluidPage(
                            mainPanel(
                              titlePanel(tags$div(class = "header-box", "Questionnaire")),
                              tags$div(class = "pink-box",
-                                      tags$h4("Personalized Questionare"),
+                                      tags$h4("Personalized Questionnaire"),
                                       div(class = "chat-history",
                                           uiOutput("currentQuestion")
                                       ),
@@ -299,7 +299,7 @@ ui <- fluidPage(
                 tabPanel("Quick Glimpse",
                          fluidPage(
                            titlePanel(tags$div(class = "header-box", "Quick Glimpse")),
-                           tags$div(class = "completion-box", style = "background-color: #E6E6FA;", # Lavender color
+                           tags$div(class = "completion-box", style = "background-color: #E6E6FA;", 
                                     p("Based on the options selected, a personalized summary of preferences and interests has been created. It appears that the choices align with the following themes:"),
                                     tags$div(class = "split-table",
                                              verbatimTextOutput("predictedCareerPathsTableOutput")
@@ -374,10 +374,10 @@ ui <- fluidPage(
 
                 tabPanel("Salary Instructions",
                          fluidPage(
-                           titlePanel(tags$div(class = "header-box", "Salary Instructions")), # Changed the color here
+                           titlePanel(tags$div(class = "header-box", "Salary Instructions")), 
                            tags$div(style = "margin-bottom: 20px;",
                                     tags$div(style = "float:left; margin-right: 10px;",
-                                             img(src = "https://png.pngtree.com/png-clipart/20230813/original/pngtree-money-salary-loan-budget-vector-picture-image_10526511.png", height = "70px", align = "center")),  # Increased height to 70px
+                                             img(src = "https://png.pngtree.com/png-clipart/20230813/original/pngtree-money-salary-loan-budget-vector-picture-image_10526511.png", height = "70px", align = "center")),  
                                     tags$div(class = "rect-bubble",
                                              p("In this section, you will be able to utilize the drop-down menu and learn how much your personalized predicted career paths make annually. By selecting from the list of careers, you can easily find the average salary that aligns with your professional interests."),
                                              p("You can ask any of those career paths and see how much they earn at a variety of experience levels. Having an understanding of potential earnings can significantly aid your career planning process, equipping you with the knowledge needed for successful negotiations and informed decisions."),
@@ -487,32 +487,13 @@ server <- function(input, output, session) {
 
   tabs_access <- reactiveVal(c(FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE))
 
-  # OTP Logic
-  otp <- reactiveVal("")
-  pre_otp <- reactiveVal("") # OTP for pre-survey
+  # Hardcoded OTPs
+  pre_otp <- reactiveVal("354733")
+  otp <- reactiveVal("283749")  # Post-Survey OTP
   otp_attempts <- reactiveVal(0)
   max_otp_attempts <- 3
   otp_verified <- reactiveVal(FALSE)
   pre_otp_verified <- reactiveVal(FALSE) # Pre-survey OTP verification
-
-  # Generate OTP for Pre-Survey
-  observe({
-    if (loggedIn() && !preSurveyCompleted()) {
-      new_otp <- generateOTP()
-      pre_otp(new_otp)
-      cat("Pre-Survey OTP generated:", new_otp, "\n")
-    }
-  })
-
-  # Generate OTP when the Post Survey Tab is reached
-  observeEvent(input$tabs, {
-    if (input$tabs == "Post Survey" && !otp_verified()) {
-      new_otp <- generateOTP()
-      otp(new_otp)
-      otp_attempts(0) # Reset attempts each time the tab is revisited
-      cat("Post-Survey OTP generated:", new_otp, "\n")  # Print OTP to console for testing
-    }
-  })
 
   # Pre-Survey OTP verification
   observeEvent(input$verifyPreOTP, {
@@ -784,7 +765,7 @@ server <- function(input, output, session) {
       ))
       return()
     }
-
+    
     # Check if input is on topic
     if (!checkUserInput(answer_text)) {
       return()
