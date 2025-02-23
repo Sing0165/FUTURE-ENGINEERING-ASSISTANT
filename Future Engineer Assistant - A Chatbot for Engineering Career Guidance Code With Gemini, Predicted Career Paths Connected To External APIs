@@ -315,10 +315,10 @@ ui <- fluidPage(
                            tags$div(class = "completion-box", style = "text-align: left;",
                                     h2("Please Complete Post Survey"),
                                     tags$p("Thank you for taking the time to participate in this survey. Your involvement is crucial for the success of our research study. The data you provide will be utilized for both the pilot testing and final results, helping us evaluate the effectiveness of the AI-guided platform. Your responses will directly inform how the platform is designed to assist undergraduate engineering students in selecting their majors. We deeply appreciate the valuable insights you are contributing to this project.
-
-                                    As a participant, your feedback will help us understand how students perceive and interact with AI when making academic decisions. We are committed to using the information gathered to refine the platform and ensure it meets the needs of students across various engineering disciplines. Your input is essential for enhancing the functionality and user experience of the system.
-
-                                    We truly appreciate your time and effort in contributing to this research. Your participation will make a significant impact on the future development of the AI-guided platform."),
+                                              
+                                              As a participant, your feedback will help us understand how students perceive and interact with AI when making academic decisions. We are committed to using the information gathered to refine the platform and ensure it meets the needs of students across various engineering disciplines. Your input is essential for enhancing the functionality and user experience of the system.
+                                              
+                                              We truly appreciate your time and effort in contributing to this research. Your participation will make a significant impact on the future development of the AI-guided platform."),
                                     # Post Survey Link
                                     tags$a(href = "https://ousurvey.qualtrics.com/jfe/form/SV_3n3jlqsnkoMkn0W", target = "_blank",
                                            class = "important-link", "Post Survey Link"),
@@ -419,10 +419,14 @@ ui <- fluidPage(
                            titlePanel(tags$div(class = "header-box", "Culmination of CVS Responses")),
                            tags$div(class = "completion-box",
                                     h2("Summary of Your Career Exploration"),
-                                    p("This page concludes your exploration into career choices, providing an overview of your predicted career paths, chatbot responses, and salary information gathered during the session. Reviewing these insights allows you to make informed decisions about your future career trajectory as you assess various opportunities."),
-                                    p("You may revisit your selected career paths, revisit any chatbot interactions, and reflect on the financial implications of your choices. This holistic overview serves to empower you as you navigate your academic and professional journey towards a fulfilling engineering career."),
+                                    p("This page concludes your exploration into career choices, providing an overview of your predicted career paths, chatbot responses, and salary information gathered during the session. Reviewing these insights allows you to make informed decisions about your future career trajectory as you assess various opportunities of significance for your personal and professional development. This comprehensive encapsulation not only features the outcomes of your responses but simultaneously empowers you as a student to consider your aspirations and the paths available to you as you progress in your academic and career journey."),
+                                    p("You may revisit your selected career paths, revisit any chatbot interactions, and reflect on the financial implications of your choices. This holistic overview serves to empower you as you navigate your academic and professional journey towards a fulfilling engineering career. We encourage you to contemplate the insights gained and how each element you explored interconnects and shapes your future endeavors."),
                                     downloadButton("downloadCareerPaths", "Download Predicted Career Paths CSV", class = "btn-primary"),
+                                    tags$br(),
+                                    tags$br(),
                                     downloadButton("downloadSalaryResponses", "Download Salary Responses CSV", class = "btn-primary"),
+                                    tags$br(),
+                                    tags$br(),
                                     downloadButton("downloadChatbotResponses", "Download Chatbot Responses CSV", class = "btn-primary")
                            )
                          )
