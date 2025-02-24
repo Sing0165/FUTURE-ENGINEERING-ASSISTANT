@@ -827,8 +827,6 @@ server <- function(input, output, session) {
 
     df$Career_Path <- sapply(df$Career_Path, clean_text)
 
-    styled_output <- paste("<span style='font-size:20px;'>", df$Career_Path, "</span>", collapse = "<br>")
-    HTML(styled_output)
   })
 
   output$downloadCareerPaths <- downloadHandler(
