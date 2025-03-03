@@ -108,7 +108,7 @@ predictCareerPaths <- function(answers, api_key) {
     return(NULL)
   }
 
-  prompt <- paste("Based on the following user responses, only suggest 5 highly specific career paths for an engineering student with a brief job description in bullet points.", paste(answers, collapse = " "))
+  prompt <- paste("Based on the following user responses, only suggest 5 highly specific career paths for an engineering student with a brief job description in bullet points. Also please number each career paths 1-5.", paste(answers, collapse = " "))
   response <- generateContent(prompt, api_key)
   return(unlist(strsplit(response, ",")))
 }
@@ -1228,6 +1228,7 @@ output$predictedCareerPathsTableOutput <- renderPrint({
 
 # Run the application 
 shinyApp(ui = ui, server = server)
+
 
 
 
