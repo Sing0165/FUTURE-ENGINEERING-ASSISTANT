@@ -16,21 +16,90 @@ getCareerPathSteps <- function(career_path, api_key) {
   return(response)
 }
 
+# Function to generate content using Google Gemini Pro API
 generateContent <- function(prompt, api_key) {
-  headers <- c(`Content-Type` = "application/json")
-  params <- list(`key` = api_key)
+  # Set headers
+  headers <- c(
+    `Content-Type` = "application/json"
+  )
+
+  # Set parameters
+  params <- list(
+    `key` = api_key
+  )
+
+  # Prepare data with the provided story prompt
   data <- sprintf('{"contents": [{"parts":[{"text": "%s"}]}]}', prompt)
+
+  # Make the API request
   res <- httr::POST(
     url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent",
     httr::add_headers(.headers = headers),
     query = params,
     body = data
   )
+
+  # Extract and return the generated story text
+  return(content(res)$candidates[[1]]$content$parts[[1]]$text)
+}
+
+# Function to generate content with vision using Google Gemini Pro API
+generate_content_vision <- function(prompt, image_source, api_key) {
+  # Read image data and encode it in base64
+  if (startsWith(image_source, "http")) {
+    # If image_source is a URL, download the image and encode it in base64
+    temp_path <- tempfile(fileext = ".jpg")
+    download.file(image_source, temp_path, mode = "wb")
+    image_data <- base64enc::base64encode(readBin(temp_path, "raw", file.info(temp_path)$size))
+    unlink(temp_path)  # Remove the temporary file
+  } else {
+    # If image_source is a local file path, read the image data and encode it in base64
+    image_data <- base64enc::base64encode(readBin(image_source, "raw", file.info(image_source)$size))
+  }
+
+  # Create a list structure representing the JSON content
+  json_content <- list(
+    contents = list(
+      list(
+        parts = list(
+          list(text = prompt),
+          list(
+            inline_data = list(
+              mime_type = "image/jpeg",
+              data = image_data
+            )
+          )
+        )
+      )
+    )
+  )
+
+  # Convert the list to JSON and write it to a file
+  json_string <- toJSON(json_content, auto_unbox = TRUE, pretty = TRUE)
+  writeLines(json_string, "request.json")
+
+  # Set headers
+  headers <- c(
+    `Content-Type` = "application/json"
+  )
+
+  # Set parameters
+  params <- list(
+    `key` = api_key
+  )
+
+  # Upload the JSON file
+  data <- upload_file("request.json")
+
+  # Make the API request for vision
+  res <- httr::POST(url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent", httr::add_headers(.headers = headers), query = params, body = data)
+
+  # Extract and return the generated text with vision
   return(content(res)$candidates[[1]]$content$parts[[1]]$text)
 }
 
 generateCareerQuestions <- function(api_key) {
-  prompt <- "Generate 10 broad, personalized questions related to career choices for engineering students."
+  prompt <- "Just generate 8 broad, personalized questions related to career choices for engineering students. Just 8 questions, that is all. Each question should come after one another. There should not be alternating"
   return(unlist(strsplit(generateContent(prompt, api_key), "\n")))
 }
 
@@ -39,13 +108,13 @@ predictCareerPaths <- function(answers, api_key) {
     return(NULL)
   }
 
-  prompt <- paste("Based on the following user responses, please suggest 5 very specific career paths for an engineering student.", paste(answers, collapse = " "))
+  prompt <- paste("Based on the following user responses, suggest 7 highly specific career paths for an engineering student with a brief job description for each with a larger font size.", paste(answers, collapse = " "))
   response <- generateContent(prompt, api_key)
   return(unlist(strsplit(response, ",")))
 }
 
 predictSalary <- function(job_title, experience, api_key) {
-  prompt <- paste("What is the expected salary for a", job_title, "with", experience, "experience in the engineering field?")
+  prompt <- paste("What is the expected salary for a", job_title, "with", experience, "experience in the engineering field in the USA? Please limit your response to 50 words.")
   response <- generateContent(prompt, api_key)
   return(response)
 }
@@ -140,12 +209,12 @@ ui <- fluidPage(
     .career-path { margin-bottom: 10px; font-size: 30px; }
     .split-table { display: flex; justify-content: center; margin: 30px 0; }
     .split-table > div { flex: 1; text-align: center; }
-    .response-bubble { margin-bottom: 15px; }
-    .quick-glimpse-text {font-size: 27px; text-align: left; } /* Increased font size for Quick Glimpse */
+    .response-bubble { margin-bottom: 15px; } /* Added spacing for chatbot responses */
   ")),
 
   # Title Section
   tags$div(class = "bubble-title", "Future Engineer Assistant"),
+  #tags$div(img(src = "cute_robot_logo.png", height = "100px", align = "center")),
   
   # Login/Registration/Main App
   conditionalPanel(
@@ -300,7 +369,7 @@ ui <- fluidPage(
                          fluidPage(
                            titlePanel(tags$div(class = "header-box", "Quick Glimpse")),
                            tags$div(class = "completion-box", style = "background-color: #E6E6FA;", 
-                                    p(class = "quick-glimpse-text", "Based on the options selected, a personalized summary of preferences and interests has been created. It appears that the choices align with the following themes:"),
+                                    p("Based on the options selected, a personalized summary of preferences and interests has been created. It appears that the choices align with the following themes:"),
                                     tags$div(class = "split-table",
                                              verbatimTextOutput("predictedCareerPathsTableOutput")
                                     ),
@@ -471,6 +540,7 @@ ui <- fluidPage(
     )
   )
 )
+
 server <- function(input, output, session) {
   chat_history <- reactiveVal(data.frame(Role = character(), Message = character(), stringsAsFactors = FALSE))
   registered <- reactiveVal(FALSE)
@@ -558,7 +628,7 @@ server <- function(input, output, session) {
 
   # Function to check if the user's input is on topic
   checkUserInput <- function(input_text) {
-    if (!isCareerRelated(input_text, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")) {
+    if (!isCareerRelated(input_text, api_key = "AIzaSyA13b_JRpiWZ86f0RPFBwBxvAiV2ukyQoI")) {
       showModal(modalDialog(
         title = "Staying on Topic",
         "We are having an essential conversation regarding your future career paths. This discussion will help you make informed decisions based on your interests, skills, and aspirations. Take your time to carefully consider your responses, as they will shape the recommendations and insights provided. Your career journey is unique, and this interactive session is designed to guide you toward opportunities that align with your goals. Stay engaged and explore the possibilities that await you!",
@@ -642,7 +712,7 @@ server <- function(input, output, session) {
       ))
       return()
     }
-    if (pre_otp_verified()){
+    if (pre_otp_verified()) {
       preSurveyCompleted(TRUE)
       tabs_access(c(TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE))
       updateTabsetPanel(session, "tabs", selected = "Introduction")
@@ -704,7 +774,7 @@ server <- function(input, output, session) {
     chatbot_responses(data.frame(Question = character(), Response = character(), stringsAsFactors = FALSE))
     recommended_careers(NULL)
     predicted_career_paths(NULL)
-    questions <- generateCareerQuestions(api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")
+    questions <- generateCareerQuestions(api_key = "AIzaSyA13b_JRpiWZ86f0RPFBwBxvAiV2ukyQoI")
     randomized_questions(questions)
     askCareerQuestions()
   }
@@ -734,7 +804,7 @@ server <- function(input, output, session) {
         chat_history()$Role[nrow(chat_history())] == "User") {
       last_question <- tail(chat_history()$Message, 1)
       answer_text <- input$chatbotAnswerInput
-      if (!isCareerRelated(answer_text, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")) {
+      if (!isCareerRelated(answer_text, api_key = "AIzaSyA13b_JRpiWZ86f0RPFBwBxvAiV2ukyQoI")) {
         return(tags$div(class = "rect-bubble",
                         paste("The question asked was not answered:", last_question)))
       }
@@ -777,17 +847,7 @@ server <- function(input, output, session) {
     # Update chat history for user input
     chat_history(rbind(chat_history(), data.frame(Role = "User", Message = answer_text, stringsAsFactors = FALSE)))
 
-    # Only call askCareerQuestions if the current index is valid
-    if (current_question_index() > 10) {
-      showModal(modalDialog(
-        title = "Error",
-        "Please ensure you answer all questions to see the predicted career paths.",
-        easyClose = TRUE,
-        footer = NULL
-      ))
-    } else {
-      askCareerQuestions()
-    }
+    askCareerQuestions()
 
     updateTextAreaInput(session, "chatbotAnswerInput", value = "")
   })
@@ -813,7 +873,7 @@ server <- function(input, output, session) {
 
   observeEvent(input$nextToGlimpse, {
     user_answers <- unlist(chat_history()[chat_history()$Role == "User", "Message"])
-    predicted_career_paths(predictCareerPaths(user_answers, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ"))
+    predicted_career_paths(predictCareerPaths(user_answers, api_key = "AIzaSyA13b_JRpiWZ86f0RPFBwBxvAiV2ukyQoI"))
     user_career_paths(rbind(user_career_paths(), data.frame(Date = Sys.Date(), Career_Path = paste(predicted_career_paths(), collapse = ", "), stringsAsFactors = FALSE)))
 
     tabs_access(c(TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE))
@@ -822,11 +882,13 @@ server <- function(input, output, session) {
 
   output$predictedCareerPathsTableOutput <- renderPrint({
     req(predicted_career_paths())
-
+    # Update to add spacing
     df <- data.frame(Career_Path = unlist(strsplit(paste(predicted_career_paths(), collapse = "   "), ",")), stringsAsFactors = FALSE)
 
     df$Career_Path <- sapply(df$Career_Path, clean_text)
 
+    styled_output <- paste("<span style='font-size:28px;'>", df$Career_Path, "</span>", collapse = "<br><br>")  # Add extra <br> for spacing
+    HTML(styled_output)
   })
 
   output$downloadCareerPaths <- downloadHandler(
@@ -851,7 +913,7 @@ server <- function(input, output, session) {
     experience_level <- input$experience
 
     if (!is.null(job_title_input) && !is.null(experience_level)) {
-      response <- predictSalary(job_title_input, experience_level, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")
+      response <- predictSalary(job_title_input, experience_level, api_key = "AIzaSyA13b_JRpiWZ86f0RPFBwBxvAiV2ukyQoI")
       salary_responses(rbind(salary_responses(), data.frame(Job_Title = job_title_input, Experience_Level = experience_level, Response = response, stringsAsFactors = FALSE)))
     }
   })
@@ -1162,4 +1224,7 @@ server <- function(input, output, session) {
   })
 }
 
-shinyApp(ui, server)
+# Run the application 
+shinyApp(ui = ui, server = server)
+
+
