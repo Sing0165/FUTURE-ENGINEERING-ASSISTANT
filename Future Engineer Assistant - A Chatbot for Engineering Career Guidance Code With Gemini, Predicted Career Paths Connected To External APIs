@@ -21,7 +21,7 @@ generateContent <- function(prompt, api_key) {
   params <- list(`key` = api_key)
   data <- sprintf('{"contents": [{"parts":[{"text": "%s"}]}]}', prompt)
   res <- httr::POST(
-    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent",
+    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent",
     httr::add_headers(.headers = headers),
     query = params,
     body = data
