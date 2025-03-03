@@ -108,7 +108,7 @@ predictCareerPaths <- function(answers, api_key) {
     return(NULL)
   }
 
-  prompt <- paste("Based on the following user responses, suggest 7 highly specific career paths for an engineering student with a brief job description for each with a larger font size.", paste(answers, collapse = " "))
+  prompt <- paste("Based on the following user responses, only suggest 5 highly specific career paths for an engineering student with a brief job description in bullet points.", paste(answers, collapse = " "))
   response <- generateContent(prompt, api_key)
   return(unlist(strsplit(response, ",")))
 }
@@ -880,16 +880,18 @@ server <- function(input, output, session) {
     updateTabsetPanel(session, "tabs", selected = "Quick Glimpse")
   })
 
-  output$predictedCareerPathsTableOutput <- renderPrint({
-    req(predicted_career_paths())
-    # Update to add spacing
-    df <- data.frame(Career_Path = unlist(strsplit(paste(predicted_career_paths(), collapse = "   "), ",")), stringsAsFactors = FALSE)
+output$predictedCareerPathsTableOutput <- renderPrint({
+  req(predicted_career_paths())
+  # Update to add spacing
+  df <- data.frame(Career_Path = unlist(strsplit(paste(predicted_career_paths(), collapse = "   "), ",")), stringsAsFactors = FALSE)
 
-    df$Career_Path <- sapply(df$Career_Path, clean_text)
+  df$Career_Path <- sapply(df$Career_Path, clean_text)
 
-    styled_output <- paste("<span style='font-size:28px;'>", df$Career_Path, "</span>", collapse = "<br><br>")  # Add extra <br> for spacing
-    HTML(styled_output)
-  })
+  # Adjust output to remove span and just use line breaks for spacing without changing font size
+  styled_output <- paste(df$Career_Path, collapse = "<br><br>")  # Add extra <br> for spacing
+  HTML(styled_output)
+})
+
 
   output$downloadCareerPaths <- downloadHandler(
     filename = function() {
@@ -1226,5 +1228,6 @@ server <- function(input, output, session) {
 
 # Run the application 
 shinyApp(ui = ui, server = server)
+
 
 
