@@ -102,7 +102,8 @@ generate_content_vision <- function(prompt, image_source, api_key) {
     data <- upload_file("request.json")
     
     # Make the API request for vision
-    res <- httr::POST(url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent", httr::add_headers(.headers = headers), query = params, body = data)
+    res <- httr::POST(url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent", 
+                      httr::add_headers(.headers = headers), query = params, body = data)
     
     # Extract and return the generated text with vision
     return(content(res)$candidates[[1]]$content$parts[[1]]$text)
@@ -219,7 +220,10 @@ ui <- fluidPage(
         .career-path { margin-bottom: 10px; font-size: 30px; }
         .split-table { display: flex; justify-content: center; margin: 30px 0; }
         .split-table > div { flex: 1; text-align: center; }
-        .response-bubble { margin-bottom: 15px; } /* Added spacing for chatbot responses */
+        .response-bubble { margin-bottom: 15px; }  /* Added spacing for chatbot responses */
+        
+        /* Quick Glimpse Left Alignment */
+        .completion-box { text-align: left; }
     ")),
 
     # Title Section
@@ -1239,8 +1243,6 @@ server <- function(input, output, session) {
 
 # Run the application 
 shinyApp(ui = ui, server = server)
-
-
 
 
 
