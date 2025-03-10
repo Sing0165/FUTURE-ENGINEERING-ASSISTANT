@@ -434,31 +434,35 @@ ui <- fluidPage(
                 ),
 
                 tabPanel("Salary Instructions",
-                         fluidPage(
-                           titlePanel(tags$div(class = "header-box", "Salary Instructions")), 
-                           tags$div(style = "margin-bottom: 20px;",
-                                    tags$div(style = "float:left; margin-right: 10px;",
-                                             img(src = "https://png.pngtree.com/png-clipart/20230813/original/pngtree-money-salary-loan-budget-vector-picture-image_10526511.png", height = "70px", align = "center")),  
-                                    tags$div(class = "rect-bubble",
-                                             p("In this section, you will be able to utilize the drop-down menu and learn how much your personalized predicted career paths make annually. By selecting from the list of careers, you can easily find the average salary that aligns with your professional interests."),
-                                             p("You can ask any of those career paths and see how much they earn at a variety of experience levels. Having an understanding of potential earnings can significantly aid your career planning process, equipping you with the knowledge needed for successful negotiations and informed decisions."),
-                                             p("With the flexibility to modify experience levels, users can analyze potential salary progression and compare different career paths to determine which offers the best long-term financial stability. This ensures a tailored and data-driven approach to career decision-making, enabling users to make well-informed choices about their future. By integrating salary predictions with career recommendations, the tool creates a seamless and personalized experience that guides users toward financially rewarding career trajectories.")
-                                    )
-                           ),
-                           actionButton("nextToSalaryPage", "Next to Salary Prediction Page", class = "btn-primary")
-                         )
-                ),
+         fluidPage(
+           titlePanel(tags$div(class = "header-box", "Salary Instructions")), 
+           tags$div(style = "margin-bottom: 20px;",
+                    tags$div(style = "float:left; margin-right: 10px;",
+                             img(src = "https://png.pngtree.com/png-clipart/20230813/original/pngtree-money-salary-loan-budget-vector-picture-image_10526511.png", height = "70px", align = "center")),  
+                    tags$div(class = "rect-bubble",
+                             p("Step 1. In this section, you will be able to utilize the drop-down menu and learn how much your personalized predicted career paths make annually. By selecting from the list of careers, you can easily find the average salary that aligns with your professional interests."),
+                             tags$br(),  # Adds space between steps
+                             tags$br(),  # Adds more space
+                             p("Step 2. You can ask any of those career paths and see how much they earn at a variety of experience levels. Having an understanding of potential earnings can significantly aid your career planning process, equipping you with the knowledge needed for successful negotiations and informed decisions."),
+                             tags$br(),  # Adds space between steps
+                             tags$br(),  # Adds more space
+                             p("Step 3. With the flexibility to modify experience levels, users can analyze potential salary progression and compare different career paths to determine which offers the best long-term financial stability. This ensures a tailored and data-driven approach to career decision-making, enabling users to make well-informed choices about their future. By integrating salary predictions with career recommendations, the tool creates a seamless and personalized experience that guides users toward financially rewarding career trajectories.")
+                    )
+           ),
+           actionButton("nextToSalaryPage", "Next to Salary Prediction Page", class = "btn-primary")
+         )
+),
 
                 tabPanel("Salary Prediction",
                          sidebarLayout(
                            sidebarPanel(
                              titlePanel(tags$div(class = "header-box", "Salary Prediction")),
                              tags$h4("Instructions"),
-                             tags$p("1. Select from a variety of engineering career paths and experience levels."),
+                             tags$p("1. Enter job title and select experience level."),
                              tags$p("2. Provide this information to receive salary insights based on the latest industry standards."),
                              tags$p("3. Note the provided salary insights for future job negotiations."),
                              tags$hr(),
-                             selectInput("job_title", "Select Job Title *", choices = NULL),
+                             textInput("job_title_input", "Enter Job Title *", placeholder = "Enter job title..."),
                              selectInput("experience", "Select Experience Level *", choices = c("Entry Level", "Mid Level", "Senior Level")),
                              actionButton("askSalaryQuestions", "Get Salary Information", class = "btn-primary")
                            ),
@@ -485,10 +489,8 @@ ui <- fluidPage(
                                                   As a participant, your feedback will help us understand how students perceive and interact with AI when making academic decisions. We are committed to using the information gathered to refine the platform and ensure it meets the needs of students across various engineering disciplines. Your input is essential for enhancing the functionality and user experience of the system.
                                                   
                                                   We truly appreciate your time and effort in contributing to this research. Your participation will make a significant impact on the future development of the AI-guided platform."),
-                                    # Post Survey Link
                                     tags$a(href = "https://ousurvey.qualtrics.com/jfe/form/SV_3n3jlqsnkoMkn0W", target = "_blank",
                                            class = "important-link", "Post Survey Link"),
-                                    # OTP Input
                                     textInput("otpInput", "Enter OTP:", placeholder = "Enter OTP"),
                                     actionButton("verifyOTP", "Verify OTP", class = "btn-primary"),
                                     uiOutput("otpStatus"),
@@ -503,7 +505,8 @@ ui <- fluidPage(
                            tags$div(class = "completion-box",
                                     h2("Summary of Your Career Exploration"),
                                     p("This page concludes your exploration into career choices, providing an overview of your predicted career paths, chatbot responses, and salary information gathered during the session. Reviewing these insights allows you to make informed decisions about your future career trajectory as you assess various opportunities of significance for your personal and professional development. This comprehensive encapsulation not only features the outcomes of your responses but simultaneously empowers you as a student to consider your aspirations and the paths available to you as you progress in your academic and career journey."),
-                                    p("You may revisit your selected career paths, revisit any chatbot interactions, and reflect on the financial implications of your choices. This holistic overview serves to empower you as you navigate your academic and professional journey towards a fulfilling engineering career. We encourage you to contemplate the insights gained and how each element you explored interconnects and shapes your future endeavors."),
+                                 p("You may revisit your selected career paths, revisit any chatbot interactions, and reflect on the financial implications of your choices. This holistic overview serves to empower you as you navigate your academic and professional journey towards a fulfilling engineering career. We encourage you to contemplate the insights gained and how each element you explored interconnects and shapes your future endeavors."),
+
                                     downloadButton("downloadCareerPaths", "Download Predicted Career Paths CSV", class = "btn-primary"),
                                     tags$br(),
                                     tags$br(),
@@ -925,7 +928,7 @@ server <- function(input, output, session) {
   })
 
   observeEvent(input$askSalaryQuestions, {
-    job_title_input <- input$job_title
+    job_title_input <- input$job_title_input
     experience_level <- input$experience
 
     if (!is.null(job_title_input) && !is.null(experience_level)) {
@@ -939,7 +942,8 @@ server <- function(input, output, session) {
   }, options = list(pageLength = 10, autoWidth = TRUE));
 
   observe({
-    updateSelectInput(session, "job_title", choices = predicted_career_paths())
+    # Commented out to remove dropdown; adjustment already made
+    # updateSelectInput(session, "job_title", choices = predicted_career_paths())
   })
 
   output$downloadSalaryResponses <- downloadHandler(
@@ -966,7 +970,7 @@ server <- function(input, output, session) {
     user_text <- input$userInput
     predicted_paths <- predicted_career_paths()
 
-    response_data <- connectCareerToChatbot(user_text, predicted_paths, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")
+    response_data <- connectCareerToChatbot(user_text, predicted_paths, api_key = "AIzaSyA13b_JRpiWZ86f0RPFBwBxvAiV2ukyQoI")
 
     chat_history(rbind(chat_history(), data.frame(Role = "User", Message = user_text, stringsAsFactors = FALSE)))
 
@@ -1222,7 +1226,7 @@ server <- function(input, output, session) {
   output$careerPathNetwork <- renderVisNetwork({
     req(input$selected_career)
     selected_career <- input$selected_career
-    career_steps <- getCareerPathSteps(selected_career, api_key = "AIzaSyA2SPN3LIko1zwCQU58YHmLMf56OUVejiQ")
+    career_steps <- getCareerPathSteps(selected_career, api_key = "AIzaSyA13b_JRpiWZ86f0RPFBwBxvAiV2ukyQoI")
 
     # Create nodes and edges
     nodes <- data.frame(id = 1:length(career_steps), label = career_steps, stringsAsFactors = FALSE)
@@ -1243,6 +1247,7 @@ server <- function(input, output, session) {
 
 # Run the application 
 shinyApp(ui = ui, server = server)
+
 
 
 
