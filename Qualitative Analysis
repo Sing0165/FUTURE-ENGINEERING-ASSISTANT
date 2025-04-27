@@ -1,0 +1,158 @@
+
+ui <- fluidPage(
+  theme = shinytheme("flatly"),
+  titlePanel(
+    h2("Qualitative Analysis of Predicted Career Paths", align = "center")
+  ),
+  
+  sidebarLayout(
+    sidebarPanel(
+      h4("Upload Your ZIP File"),
+      fileInput("zipfile", "Choose ZIP File", accept = ".zip"),
+      actionButton("analyze", "Start Analysis", class = "btn btn-success"),
+      hr(),
+      h5(textOutput("status")),
+      width = 3
+    ),
+    
+    mainPanel(
+      tabsetPanel(type = "tabs",
+        tabPanel("Uploaded Files", 
+                 br(),
+                 DTOutput("filetable")),
+        
+        tabPanel("Word Frequency Table",
+                 br(),
+                 DTOutput("wordfreq")),
+        
+        tabPanel("Word Cloud Visualization",
+                 br(),
+                 plotOutput("wordcloud", height = "600px")),
+        
+        tabPanel("Bigram Analysis",
+                 br(),
+                 plotOutput("bigramcloud", height = "600px")),
+        
+        tabPanel("Sentiment Scores",
+                 br(),
+                 DTOutput("sentimenttable")),
+        
+        tabPanel("Sentiment Trend",
+                 br(),
+                 plotOutput("sentimentplot", height = "500px")),
+        
+        tabPanel("Topic Modeling (LDA)",
+                 br(),
+                 DTOutput("topicmodeling")),
+        
+        tabPanel("Emotion Analysis",
+                 br(),
+                 plotOutput("emotionplot", height = "600px"))
+      ),
+      width = 9
+    )
+  )
+)
+server <- function(input, output, session) {
+  values <- reactiveValues(files = NULL, all_texts = NULL, tokens_clean = NULL, sentiment_scores = NULL)
+  
+  observeEvent(input$analyze, {
+    req(input$zipfile)
+    
+    # 1. Unzip file
+    temp_dir <- tempdir()
+    unzip(input$zipfile$datapath, exdir = temp_dir)
+    files <- list.files(temp_dir, full.names = TRUE)
+    values$files <- files
+    
+    # 2. Read files
+    data_list <- lapply(files, function(file) {
+      if (grepl("\\.csv$", file)) {
+        read_csv(file)
+      } else if (grepl("\\.txt$", file)) {
+        tibble(text = readLines(file, warn = FALSE))
+      } else {
+        NULL
+      }
+    })
+    
+    all_texts <- bind_rows(data_list) %>% 
+      pivot_longer(cols = everything(), values_to = "text") %>% 
+      select(text) %>% 
+      drop_na()
+    
+    # 3. Clean text
+    clean_text <- all_texts %>%
+      mutate(text = tolower(text),
+             text = removePunctuation(text),
+             text = removeNumbers(text),
+             text = stripWhitespace(text))
+    
+    tokens <- clean_text %>%
+      unnest_tokens(word, text)
+    
+    data(stop_words)
+    tokens_clean <- tokens %>%
+      anti_join(stop_words)
+    
+    # 4. Sentiment scores
+    sentiment_scores <- get_sentiment(all_texts$text)
+    
+    # Save into reactive values
+    values$all_texts <- all_texts
+    values$tokens_clean <- tokens_clean
+    values$sentiment_scores <- sentiment_scores
+  })
+  
+  # Tab 1 - Files Extracted
+  output$filetable <- renderDT({
+    req(values$files)
+    datatable(tibble(Files = basename(values$files)))
+  })
+  
+  # Tab 2 - Word Frequency
+  output$wordfreq <- renderDT({
+    req(values$tokens_clean)
+    word_freq <- values$tokens_clean %>%
+      count(word, sort = TRUE)
+    datatable(word_freq)
+  })
+  
+  # Tab 3 - Word Cloud
+  output$wordcloud <- renderPlot({
+    req(values$tokens_clean)
+    word_freq <- values$tokens_clean %>%
+      count(word, sort = TRUE)
+    set.seed(123)
+    wordcloud(words = word_freq$word, freq = word_freq$n, min.freq = 2,
+              max.words = 200, random.order = FALSE, colors = brewer.pal(8, "Dark2"))
+  })
+  
+  # Tab 4 - Sentiment Table
+  output$sentimenttable <- renderDT({
+    req(values$sentiment_scores)
+    sentiment_df <- tibble(Text_Index = 1:length(values$sentiment_scores),
+                           Sentiment_Score = values$sentiment_scores)
+    datatable(sentiment_df)
+  })
+  
+  # Tab 5 - Sentiment Plot
+  output$sentimentplot <- renderPlot({
+    req(values$sentiment_scores)
+    plot(values$sentiment_scores, type = "l", col = "blue",
+         main = "Sentiment Over Text",
+         xlab = "Text Index", ylab = "Sentiment Score")
+    abline(h = 0, col = "red")
+  })
+  
+  # Status
+  output$status <- renderText({
+    if (is.null(values$files)) {
+      "Waiting for upload..."
+    } else {
+      paste(length(values$files), "files extracted and analyzed.")
+    }
+  })
+}
+
+shinyApp(ui, server)
