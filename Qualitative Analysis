@@ -1,3 +1,12 @@
+library(shiny)
+library(shinythemes)
+library(tidyverse)
+library(DT)
+library(tidytext)
+library(wordcloud)
+library(ggplot2)
+library(janeaustenr)
+library(lubridate)
 
 ui <- fluidPage(
   theme = shinytheme("flatly"),
@@ -47,14 +56,19 @@ ui <- fluidPage(
         
         tabPanel("Emotion Analysis",
                  br(),
-                 plotOutput("emotionplot", height = "600px"))
+                 plotOutput("emotionplot", height = "600px")),
+        
+        tabPanel("Narrative Analysis",
+                 br(),
+                 plotOutput("narrativePlot", height = "600px"))
       ),
       width = 9
     )
   )
 )
+
 server <- function(input, output, session) {
-  values <- reactiveValues(files = NULL, all_texts = NULL, tokens_clean = NULL, sentiment_scores = NULL)
+  values <- reactiveValues(files = NULL, all_texts = NULL, tokens_clean = NULL, sentiment_scores = NULL, bigrams = NULL)
   
   observeEvent(input$analyze, {
     req(input$zipfile)
@@ -95,13 +109,19 @@ server <- function(input, output, session) {
     tokens_clean <- tokens %>%
       anti_join(stop_words)
     
-    # 4. Sentiment scores
-    sentiment_scores <- get_sentiment(all_texts$text)
+    # 4. Calculate bigrams
+    bigrams <- clean_text %>%
+      unnest_tokens(bigram, text, token = "ngrams", n = 2) %>%
+      count(bigram, sort = TRUE)
+    
+    # 5. Sentiment scores
+    sentiment_scores <- get_sentiment(all_texts$text) 
     
     # Save into reactive values
     values$all_texts <- all_texts
     values$tokens_clean <- tokens_clean
     values$sentiment_scores <- sentiment_scores
+    values$bigrams <- bigrams
   })
   
   # Tab 1 - Files Extracted
@@ -128,7 +148,15 @@ server <- function(input, output, session) {
               max.words = 200, random.order = FALSE, colors = brewer.pal(8, "Dark2"))
   })
   
-  # Tab 4 - Sentiment Table
+  # Tab 4 - Bigram Cloud
+  output$bigramcloud <- renderPlot({
+    req(values$bigrams)
+    set.seed(123)
+    wordcloud(words = values$bigrams$bigram, freq = values$bigrams$n, min.freq = 1,
+              max.words = 100, random.order = FALSE, colors = brewer.pal(8, "Set3"))
+  })
+  
+  # Tab 5 - Sentiment Table
   output$sentimenttable <- renderDT({
     req(values$sentiment_scores)
     sentiment_df <- tibble(Text_Index = 1:length(values$sentiment_scores),
@@ -136,7 +164,7 @@ server <- function(input, output, session) {
     datatable(sentiment_df)
   })
   
-  # Tab 5 - Sentiment Plot
+  # Tab 6 - Sentiment Plot
   output$sentimentplot <- renderPlot({
     req(values$sentiment_scores)
     plot(values$sentiment_scores, type = "l", col = "blue",
@@ -145,6 +173,24 @@ server <- function(input, output, session) {
     abline(h = 0, col = "red")
   })
   
+  # Tab 7 - Narrative Analysis Plot
+  output$narrativePlot <- renderPlot({
+    req(values$all_texts)
+    narrative_analysis <- values$all_texts %>%
+      unnest_tokens(word, text) %>%
+      count(word) %>%
+      top_n(20) %>%
+      mutate(word = reorder(word, n)) %>%
+      ggplot(aes(x = word, y = n)) +
+      geom_col(fill = "steelblue") +
+      coord_flip() +
+      labs(title = "Top 20 Words in Narratives",
+           x = "Words",
+           y = "Frequency")
+    
+    print(narrative_analysis)
+  })
+
   # Status
   output$status <- renderText({
     if (is.null(values$files)) {
