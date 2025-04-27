@@ -21,6 +21,10 @@ ui <- fluidPage(
       actionButton("analyze", "Start Analysis", class = "btn btn-success"),
       hr(),
       h5(textOutput("status")),
+      hr(),
+      h4("Define Coding Framework"),
+      textAreaInput("coding_framework", "Enter codes (comma-separated)", placeholder = "Collaboration, Hands-On Experience, Ethical Practices..."),
+      actionButton("code_data", "Code the Data", class = "btn btn-primary"),
       width = 3
     ),
     
@@ -50,9 +54,13 @@ ui <- fluidPage(
                  br(),
                  plotOutput("sentimentplot", height = "500px")),
         
-        tabPanel("Topic Modeling (LDA)",
+        tabPanel("Coded Texts",
                  br(),
-                 DTOutput("topicmodeling")),
+                 DTOutput("codedtable")),
+        
+        tabPanel("Thematic Analysis",
+                 br(),
+                 plotOutput("thematicplot", height = "600px")),
         
         tabPanel("Emotion Analysis",
                  br(),
@@ -68,7 +76,9 @@ ui <- fluidPage(
 )
 
 server <- function(input, output, session) {
-  values <- reactiveValues(files = NULL, all_texts = NULL, tokens_clean = NULL, sentiment_scores = NULL, bigrams = NULL)
+  values <- reactiveValues(files = NULL, all_texts = NULL, tokens_clean = NULL, 
+                           sentiment_scores = NULL, bigrams = NULL, coded_texts = NULL, 
+                           themes = NULL)
   
   observeEvent(input$analyze, {
     req(input$zipfile)
@@ -173,7 +183,48 @@ server <- function(input, output, session) {
     abline(h = 0, col = "red")
   })
   
-  # Tab 7 - Narrative Analysis Plot
+  # Code the Data
+  observeEvent(input$code_data, {
+    req(values$all_texts)
+    coding_framework <- str_split(input$coding_framework, ",\\s*")[[1]]
+    
+    coded_texts <- values$all_texts %>%
+      mutate(coded = sapply(text, function(txt) {
+        codes_found <- coding_framework[grepl(paste(coding_framework, collapse = "|"), txt, ignore.case = TRUE)]
+        if (length(codes_found) > 0) {
+          paste(codes_found, collapse = ", ")
+        } else {
+          NA  # Use NA instead of "No Codes Found"
+        }
+      }))
+    
+    # Filter coded texts to only include those with coded values
+    values$coded_texts <- coded_texts %>% filter(!is.na(coded))
+  })
+  
+  # Tab 7 - Coded Texts
+  output$codedtable <- renderDT({
+    req(values$coded_texts)
+    datatable(values$coded_texts)
+  })
+
+  # Tab 8 - Thematic Analysis Plot
+  output$thematicplot <- renderPlot({
+    req(values$coded_texts)
+    theme_summary <- values$coded_texts %>%
+      unnest_tokens(theme, coded) %>%
+      count(theme) %>%
+      ggplot(aes(x = reorder(theme, n), y = n)) +
+      geom_col(fill = "steelblue") +
+      coord_flip() +
+      labs(title = "Themes Identified from Coded Texts",
+           x = "Themes",
+           y = "Frequency")
+    
+    print(theme_summary)
+  })
+
+  # Tab 9 - Narrative Analysis Plot
   output$narrativePlot <- renderPlot({
     req(values$all_texts)
     narrative_analysis <- values$all_texts %>%
