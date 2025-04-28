@@ -1,0 +1,401 @@
+library(shiny)
+library(readr)
+library(stringr)
+library(dplyr)
+library(ggplot2)
+library(tools)
+library(shinythemes)
+
+# Define UI
+ui <- navbarPage(
+  title = "Qualitative Analysis App",
+  theme = shinytheme("flatly"),
+  
+  # Custom CSS for styling
+  header = tags$head(
+    tags$style(HTML("
+      /* Global fonts and colors */
+      body, .navbar, .navbar-default {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background-color: #f5f7fa;
+        color: #2c3e50;
+      }
+      
+      /* Navbar styles */
+      .navbar-default {
+        background-color: #34495e;
+        border-color: #2c3e50;
+      }
+      .navbar-default .navbar-brand, 
+      .navbar-default .navbar-nav > li > a {
+        color: #ecf0f1;
+        font-weight: 600;
+        font-size: 18px;
+        transition: color 0.3s ease;
+      }
+      .navbar-default .navbar-nav > li > a:hover,
+      .navbar-default .navbar-brand:hover {
+        color: #1abc9c;
+      }
+
+      /* Page titles */
+      h2, h3, h4 {
+        font-family: 'Segoe UI Semibold', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        color: #34495e;
+      }
+      h2 {
+        font-size: 32px;
+        margin-bottom: 15px;
+      }
+      h3 {
+        font-size: 26px;
+        margin-bottom: 12px;
+      }
+      h4 {
+        font-size: 22px;
+        margin-bottom: 10px;
+      }
+
+      /* Intro box styling */
+      .intro-box {
+        background-color: #ffffff;
+        padding: 30px 40px;
+        border-radius: 12px;
+        box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+        margin-top: 40px;
+        border-left: 6px solid #1abc9c;
+        color: #2c3e50;
+        line-height: 1.8;
+      }
+      
+      /* Paragraphs */
+      p {
+        font-size: 17px;
+        color: #555555;
+        line-height: 1.7;
+        margin-bottom: 12px;
+      }
+
+      /* Sidebar styling */
+      .well {
+        background-color: #ffffff !important;
+        border-radius: 12px !important;
+        border: 1px solid #ddd !important;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05) !important;
+      }
+
+      /* Buttons */
+      .btn-primary {
+        background-color: #1abc9c;
+        border-color: #16a085;
+        font-weight: 600;
+        font-size: 16px;
+        padding: 10px 25px;
+        border-radius: 8px;
+        box-shadow: 0 3px 8px rgba(26,188,156,0.5);
+        transition: background-color 0.3s ease, box-shadow 0.3s ease;
+      }
+      .btn-primary:hover, .btn-primary:focus {
+        background-color: #16a085;
+        box-shadow: 0 6px 15px rgba(22,160,133,0.8);
+      }
+
+      /* File input */
+      input[type='file'] {
+        cursor: pointer;
+      }
+
+      /* Status text */
+      #status {
+        font-weight: 600;
+        color: #e74c3c;
+        margin-top: 10px;
+        margin-bottom: 10px;
+        font-size: 15px;
+      }
+      #status:contains('✅') {
+        color: #27ae60;
+      }
+
+      /* Table preview */
+      table {
+        width: 100% !important;
+        border-collapse: collapse;
+        margin-top: 15px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      }
+      th, td {
+        padding: 10px 15px !important;
+        border: 1px solid #ddd !important;
+        text-align: left;
+        font-size: 15px;
+      }
+      th {
+        background-color: #1abc9c !important;
+        color: white !important;
+        font-weight: 600 !important;
+      }
+      tr:nth-child(even) {
+        background-color: #f9f9f9 !important;
+      }
+      tr:hover {
+        background-color: #d1f0e8 !important;
+      }
+
+      /* Summary verbatim text */
+      pre {
+        background-color: #ffffff;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+        font-size: 14px;
+        color: #34495e;
+      }
+
+      /* Lists in summary */
+      ul {
+        list-style-type: square;
+        padding-left: 25px;
+        font-size: 16px;
+        color: #2c3e50;
+      }
+      ul li {
+        margin-bottom: 6px;
+      }
+
+      /* Plot titles */
+      .shiny-plot-output h4 {
+        margin-top: 40px;
+        margin-bottom: 20px;
+      }
+
+      /* HR styling */
+      hr {
+        border: none;
+        border-top: 1px solid #eee;
+        margin: 30px 0;
+      }
+      
+      /* Scrollbar for long UI */
+      ::-webkit-scrollbar {
+        width: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #f1f1f1;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #1abc9c;
+        border-radius: 20px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #16a085;
+      }
+    "))
+  ),
+  
+  tabPanel("Home",
+           fluidPage(
+             fluidRow(
+               column(8, offset = 2,
+                      div(class = "intro-box",
+                          h2("Welcome to the Qualitative Analysis App"),
+                          p("This application allows you to upload a ZIP file containing CSV datasets, 
+                            select a CSV file from within the ZIP, and analyze qualitative (categorical/text) variables by visualizing their distributions."),
+                          p("Use the 'Upload & Analyze' tab to upload your data and run the analysis."),
+                          p("Once the data is loaded, explore the 'Summary' tab for dataset information and 'Plots' tab for detailed visualizations."),
+                          br(),
+                          p("Enjoy your data exploration!")
+                      )
+               )
+             )
+           )
+  ),
+  
+  tabPanel("Upload & Analyze",
+           sidebarLayout(
+             sidebarPanel(
+               fileInput("zip_file", "Upload ZIP file with CSV(s):", accept = ".zip"),
+               uiOutput("select_csv_ui"),
+               actionButton("analyze", "Analyze Data", class = "btn-primary"),
+               br(), br(),
+               textOutput("status"),
+               tags$hr(),
+               uiOutput("summary_ui")
+             ),
+             mainPanel(
+               h4("Instructions"),
+               p("1. Upload a ZIP file containing one or more CSV files."),
+               p("2. If multiple CSV files are found, select the one to analyze."),
+               p("3. Click 'Analyze Data' to process and visualize qualitative columns."),
+               br(),
+               h4("Preview of Dataset (first 10 rows):"),
+               tableOutput("data_preview")
+             )
+           )
+  ),
+  
+  tabPanel("Summary",
+           fluidPage(
+             h3("Dataset Summary"),
+             verbatimTextOutput("data_summary"),
+             br(),
+             h4("Qualitative Columns:"),
+             uiOutput("qual_cols_ui")
+           )
+  ),
+  
+  tabPanel("Plots",
+           fluidPage(
+             h3("Qualitative Variable Distributions"),
+             uiOutput("plots_ui")
+           )
+  )
+)
+
+# Define server logic
+server <- function(input, output, session) {
+  
+  extracted_path <- reactiveVal(NULL)
+  csv_files <- reactiveVal(character(0))
+  
+  # Extract ZIP and list CSVs
+  observeEvent(input$zip_file, {
+    req(input$zip_file)
+    temp_dir <- tempfile()
+    dir.create(temp_dir)
+    unzip(input$zip_file$datapath, exdir = temp_dir)
+    extracted_path(temp_dir)
+    
+    files <- list.files(temp_dir, pattern = "\\.csv$", full.names = TRUE)
+    csv_files(files)
+    
+    if (length(files) == 0) {
+      output$status <- renderText("❌ No CSV files found in the uploaded ZIP.")
+      output$select_csv_ui <- renderUI(NULL)
+    } else {
+      output$status <- renderText(paste0("✅ Found ", length(files), " CSV file(s)."))
+      output$select_csv_ui <- renderUI({
+        if (length(files) > 1) {
+          selectInput("csv_file", "Select CSV file to analyze:", choices = files)
+        } else {
+          tags$div(
+            tags$b("Single CSV detected:"), 
+            basename(files[1])
+          )
+        }
+      })
+    }
+  })
+  
+  # Reactive to read selected CSV
+  survey_data <- reactive({
+    req(extracted_path())
+    files <- csv_files()
+    
+    if (length(files) == 0) return(NULL)
+    
+    selected_file <- if (length(files) > 1) {
+      req(input$csv_file)
+      input$csv_file
+    } else {
+      files[1]
+    }
+    
+    tryCatch({
+      read_csv(selected_file, skip = 2)
+    }, error = function(e) {
+      showNotification(paste("Error reading CSV:", e$message), type = "error")
+      return(NULL)
+    })
+  })
+  
+  # Preview first 10 rows
+  output$data_preview <- renderTable({
+    df <- survey_data()
+    if (is.null(df)) return(NULL)
+    head(df, 10)
+  })
+  
+  # Summary UI after analysis
+  output$summary_ui <- renderUI({
+    req(survey_data())
+    tags$div(
+      tags$b("Rows:"), nrow(survey_data()), tags$br(),
+      tags$b("Columns:"), ncol(survey_data())
+    )
+  })
+  
+  # Dataset summary for Summary tab
+  output$data_summary <- renderPrint({
+    df <- survey_data()
+    if (is.null(df)) {
+      cat("No data loaded yet.")
+    } else {
+      summary(df)
+    }
+  })
+  
+  # Show qualitative columns in Summary tab
+  output$qual_cols_ui <- renderUI({
+    df <- survey_data()
+    if (is.null(df)) return(NULL)
+    qualitative_cols <- names(df)[sapply(df, function(x) is.character(x) || is.factor(x))]
+    if (length(qualitative_cols) == 0) {
+      p("No qualitative (categorical/text) columns found.")
+    } else {
+      tags$ul(lapply(qualitative_cols, tags$li))
+    }
+  })
+  
+  # Generate plots when Analyze is clicked
+  observeEvent(input$analyze, {
+    df <- survey_data()
+    req(df)
+    
+    qualitative_cols <- names(df)[sapply(df, function(x) is.character(x) || is.factor(x))]
+    
+    if (length(qualitative_cols) == 0) {
+      output$plots_ui <- renderUI({
+        h4("No qualitative (categorical/text) columns found in the dataset.")
+      })
+    } else {
+      output$plots_ui <- renderUI({
+        plot_output_list <- lapply(qualitative_cols, function(col) {
+          plotname <- paste0("plot_", make.names(col))
+          tagList(
+            h4(paste("Analysis for:", col)),
+            plotOutput(plotname, height = "400px"),
+            tags$hr()
+          )
+        })
+        do.call(tagList, plot_output_list)
+      })
+      
+      for (col in qualitative_cols) {
+        local({
+          my_col <- col
+          plotname <- paste0("plot_", make.names(my_col))
+          output[[plotname]] <- renderPlot({
+            plot_df <- df %>%
+              filter(!is.na(.data[[my_col]]), .data[[my_col]] != "") %>%
+              group_by(.data[[my_col]]) %>%
+              summarize(Count = n()) %>%
+              arrange(desc(Count))
+            
+            ggplot(plot_df, aes(x = reorder(.data[[my_col]], -Count), y = Count)) +
+              geom_bar(stat = "identity", fill = "#1abc9c", alpha = 0.85) +
+              labs(x = my_col, y = "Count", title = paste("Distribution of", my_col)) +
+              theme_minimal(base_size = 15) +
+              theme(axis.text.x = element_text(angle = 45, hjust = 1, color = "#34495E"),
+                    plot.title = element_text(face = "bold", size = 18, hjust = 0.5),
+                    panel.grid.major.x = element_blank())
+          })
+        })
+      }
+    }
+  })
+  
+}
+
+# Run the app
+shinyApp(ui = ui, server = server)
