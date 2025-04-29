@@ -1,3 +1,4 @@
+# Load required libraries
 library(shiny)
 library(readr)
 library(stringr)
@@ -220,7 +221,9 @@ ui <- navbarPage(
                br(), br(),
                textOutput("status"),
                tags$hr(),
-               uiOutput("summary_ui")
+               uiOutput("summary_ui"),
+               textInput("keyword", "Enter Keywords for Analysis:", placeholder = "comma-separated"),
+               actionButton("keyword_analyze", "Analyze Keywords", class = "btn-primary")
              ),
              mainPanel(
                h4("Instructions"),
@@ -229,7 +232,10 @@ ui <- navbarPage(
                p("3. Click 'Analyze Data' to process and visualize qualitative columns."),
                br(),
                h4("Preview of Dataset (first 10 rows):"),
-               tableOutput("data_preview")
+               tableOutput("data_preview"),
+               br(),
+               h4("Keyword Analysis Result:"),
+               verbatimTextOutput("keyword_summary")
              )
            )
   ),
@@ -371,6 +377,7 @@ server <- function(input, output, session) {
         do.call(tagList, plot_output_list)
       })
       
+      # Plot each qualitative column
       for (col in qualitative_cols) {
         local({
           my_col <- col
@@ -395,6 +402,26 @@ server <- function(input, output, session) {
     }
   })
   
+  # Keyword analysis
+  observeEvent(input$keyword_analyze, {
+    df <- survey_data()
+    req(df)
+    
+    keywords <- str_split(trimws(input$keyword), ",")[[1]]
+    keywords <- str_trim(keywords) # Trim whitespace around keywords
+    
+    keyword_results <- sapply(keywords, function(keyword) {
+      matched_rows <- df %>%
+        filter(if_any(everything(), ~ str_detect(.x, regex(keyword, ignore_case = TRUE)))) %>%
+        nrow()
+      
+      paste0("Keyword '", keyword, "' found in ", matched_rows, " rows.")
+    })
+    
+    output$keyword_summary <- renderPrint({
+      paste(keyword_results, collapse = "\n")
+    })
+  })
 }
 
 # Run the app
