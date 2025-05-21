@@ -1,0 +1,140 @@
+# Load libraries
+library(shiny)
+library(shinydashboard)
+library(readr)
+library(dplyr)
+library(zip)
+
+# UI
+ui <- dashboardPage(
+  dashboardHeader(title = "CSV Merger & Zipper"),
+  dashboardSidebar(
+    sidebarMenu(
+      menuItem("Upload & Preview", tabName = "upload", icon = icon("upload")),
+      menuItem("Merged Data", tabName = "merged", icon = icon("table")),
+      menuItem("Download ZIP", tabName = "download", icon = icon("download"))
+    )
+  ),
+  dashboardBody(
+    tags$head(
+      tags$style(HTML("
+        body, table, .box-body, .content-wrapper {
+          font-family: 'Times New Roman', serif;
+        }
+        .box {
+          border: 1px solid #ddd;
+          box-shadow: 2px 2px 5px #ccc;
+        }
+      "))
+    ),
+    tabItems(
+      tabItem(tabName = "upload",
+              fluidRow(
+                box(width = 12, title = "Upload CSV Files", solidHeader = TRUE, status = "primary",
+                    fileInput("csv_files", "Select Multiple CSV Files", multiple = TRUE, accept = ".csv")
+                )
+              ),
+              fluidRow(
+                box(width = 12, title = "Preview of Each File (First 5 Rows)", solidHeader = TRUE, status = "info",
+                    uiOutput("preview_output")
+                )
+              )
+      ),
+      tabItem(tabName = "merged",
+              fluidRow(
+                box(width = 12, title = "Merged Dataset (with SourceFile Column)", solidHeader = TRUE, status = "success",
+                    tableOutput("merged_table")
+                )
+              )
+      ),
+      tabItem(tabName = "download",
+              fluidRow(
+                box(width = 12, title = "Download Merged + Original Files", solidHeader = TRUE, status = "warning",
+                    downloadButton("download_zip", "Download ZIP File", class = "btn btn-primary")
+                )
+              )
+      )
+    )
+  )
+)
+
+# Server
+server <- function(input, output, session) {
+  # Read all CSVs into list with filenames
+  all_data <- reactive({
+    req(input$csv_files)
+    files <- input$csv_files
+    lapply(seq_along(files$datapath), function(i) {
+      df <- read_csv(files$datapath[i])
+      df$SourceFile <- files$name[i]
+      df
+    })
+  })
+
+  # Preview output
+  output$preview_output <- renderUI({
+    req(all_data())
+    files <- input$csv_files
+    previews <- lapply(seq_along(all_data()), function(i) {
+      tagList(
+        h4(paste("File:", files$name[i])),
+        tableOutput(paste0("preview_", i))
+      )
+    })
+    do.call(tagList, previews)
+  })
+
+  observe({
+    req(all_data())
+    for (i in seq_along(all_data())) {
+      local({
+        my_i <- i
+        output[[paste0("preview_", my_i)]] <- renderTable({
+          head(all_data()[[my_i]], 5)
+        })
+      })
+    }
+  })
+
+  # Merged dataset
+  merged_data <- reactive({
+    req(all_data())
+    bind_rows(all_data())
+  })
+
+  output$merged_table <- renderTable({
+    req(merged_data())
+    head(merged_data(), 10)
+  })
+
+  # Download ZIP with all files + merged file
+  output$download_zip <- downloadHandler(
+    filename = function() {
+      paste0("merged_csv_files_", Sys.Date(), ".zip")
+    },
+    content = function(file) {
+      req(input$csv_files)
+      files <- input$csv_files
+      temp_dir <- tempdir()
+      temp_files <- c()
+
+      # Save original files
+      for (i in seq_along(files$datapath)) {
+        temp_file <- file.path(temp_dir, files$name[i])
+        file.copy(files$datapath[i], temp_file)
+        temp_files <- c(temp_files, temp_file)
+      }
+
+      # Save merged data
+      merged_path <- file.path(temp_dir, "merged_data.csv")
+      write_csv(merged_data(), merged_path)
+      temp_files <- c(temp_files, merged_path)
+
+      # Create ZIP
+      zip(zipfile = file, files = temp_files, flags = "-j")
+    }
+  )
+}
+
+# Run app
+shinyApp(ui, server)
