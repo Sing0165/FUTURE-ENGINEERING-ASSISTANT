@@ -26,31 +26,57 @@ getCareerPathSteps <- function(career_path, api_key) {
   return(response)
 }
 
-# Function to generate content using Google Gemini Pro API
-generateContent <- function(prompt, api_key) {
-  # Set headers
-  headers <- c(
-    `Content-Type` = "application/json"
+# Generate Content Function (unchanged)
+generateContent <- function(prompt, api_key, model_endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent") {
+  headers <- c(`Content-Type` = "application/json")
+  params <- list(`key` = api_key)
+  payload <- list(contents = list(list(parts = list(list(text = as.character(prompt)))))) 
+  body_json <- jsonlite::toJSON(payload, auto_unbox = TRUE)
+  
+  res <- tryCatch(
+    httr::POST(
+      url = model_endpoint,
+      httr::add_headers(.headers = headers),
+      query = params,
+      body = body_json,
+      encode = "raw",
+      timeout(30)
+    ),
+    error = function(e) e
   )
-
-  # Set parameters
-  params <- list(
-    `key` = api_key
-  )
-
-  # Prepare data with the provided story prompt
-  data <- sprintf('{"contents": [{"parts":[{"text": "%s"}]}]}', prompt)
-
-  # Make the API request
-  res <- httr::POST(
-    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent",
-    httr::add_headers(.headers = headers),
-    query = params,
-    body = data
-  )
-
-  # Extract and return the generated story text
-  return(content(res)$candidates[[1]]$content$parts[[1]]$text)
+  
+  if (inherits(res, "error")) {
+    return(list(ok=FALSE, status=NA, text=paste0("Network error: ", res$message)))
+  }
+  
+  status <- httr::status_code(res)
+  raw_text <- tryCatch(httr::content(res, as = "text", encoding = "UTF-8"), error=function(e) NA_character_)
+  
+  if (status == 200) {
+    parsed <- tryCatch(jsonlite::fromJSON(raw_text, simplifyVector=FALSE), error=function(e) NULL)
+    generated_text <- NULL
+    if (!is.null(parsed)) {
+      if (!is.null(parsed$candidates) && length(parsed$candidates) > 0 &&
+          !is.null(parsed$candidates[[1]]$content$parts) &&
+          length(parsed$candidates[[1]]$content$parts) > 0) {
+        generated_text <- parsed$candidates[[1]]$content$parts[[1]]$text
+      } else if (!is.null(parsed$outputs) && length(parsed$outputs) > 0 &&
+                 !is.null(parsed$outputs[[1]]$content) &&
+                 !is.null(parsed$outputs[[1]]$content$parts) &&
+                 length(parsed$outputs[[1]]$content$parts) > 0) {
+        generated_text <- parsed$outputs[[1]]$content$parts[[1]]$text
+      } else if (!is.null(parsed$results) && length(parsed$results) > 0) {
+        generated_text <- paste(unlist(parsed$results), collapse="\n")
+      }
+    }
+    if (!is.null(generated_text)) {
+      return(list(ok=TRUE, status=status, text=as.character(generated_text)))
+    } else {
+      return(list(ok=FALSE, status=status, text=paste0("No parsable response. Raw: ", raw_text)))
+    }
+  } else {
+    return(list(ok=FALSE, status=status, text=paste0("HTTP ", status, " - ", raw_text)))
+  }
 }
 
 # Function to generate content with vision using Google Gemini Pro API
@@ -102,7 +128,7 @@ generate_content_vision <- function(prompt, image_source, api_key) {
   data <- upload_file("request.json")
 
   # Make the API request for vision
-  res <- httr::POST(url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent",
+  res <- httr::POST(url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
                     httr::add_headers(.headers = headers), query = params, body = data)
 
   # Extract and return the generated text with vision
