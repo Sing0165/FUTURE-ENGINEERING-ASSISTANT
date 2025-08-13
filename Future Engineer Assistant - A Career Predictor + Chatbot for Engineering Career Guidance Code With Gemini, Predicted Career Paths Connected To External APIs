@@ -10,15 +10,16 @@ library(visNetwork)
 library(stringr)
 library(base64enc)
 
-# Function to trim responses to a maximum of 100 words
 trim_response <- function(response, max_words = 100) {
+  if (is.null(response) || !is.character(response)) {
+    return("")
+  }
   words <- unlist(strsplit(response, " "))
   if (length(words) > max_words) {
     response <- paste(words[1:max_words], collapse = " ")
   }
   return(response)
 }
-
 # Functions for content generation and career path prediction
 getCareerPathSteps <- function(career_path, api_key) {
   prompt <- paste("List the steps required to reach the highest or chief level for the career path:", career_path)
